@@ -1,0 +1,169 @@
+{% extends 'base.html' %} {% load static %} {% block title %}Contact Us -
+HagerBet{% endblock %} {% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+  <div class="text-center mb-12">
+    <h1 class="text-4xl font-bold text-gray-900 mb-4">Contact Us</h1>
+    <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+      We'd love to hear from you. Send us a message and we'll respond as soon as
+      possible.
+    </p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+    <!-- Contact Form -->
+    <div class="bg-white rounded-lg shadow-md p-8">
+      <h2 class="text-2xl font-semibold mb-6">Send us a Message</h2>
+
+      <form id="contact-form" class="space-y-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div class="form-group">
+            <label for="name" class="form-label">Full Name *</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              required
+              class="form-input"
+              placeholder="Your full name"
+            />
+            <div id="name-error" class="error-message hidden"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="email" class="form-label">Email Address *</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              required
+              class="form-input"
+              placeholder="your.email@example.com"
+            />
+            <div id="email-error" class="error-message hidden"></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="subject" class="form-label">Subject *</label>
+          <input
+            type="text"
+            id="subject"
+            name="subject"
+            required
+            class="form-input"
+            placeholder="What is this regarding?"
+          />
+          <div id="subject-error" class="error-message hidden"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="message" class="form-label">Message *</label>
+          <textarea
+            id="message"
+            name="message"
+            rows="6"
+            required
+            class="form-textarea"
+            placeholder="Please describe your inquiry in detail..."
+          ></textarea>
+          <div id="message-error" class="error-message hidden"></div>
+        </div>
+
+        <button type="submit" class="w-full btn-primary py-3 text-lg">
+          <i class="fas fa-paper-plane mr-2"></i>Send Message
+        </button>
+      </form>
+    </div>
+
+    <!-- Contact Information -->
+    <div class="space-y-8">
+      <div class="bg-white rounded-lg shadow-md p-8">
+        <h2 class="text-2xl font-semibold mb-6">Get in Touch</h2>
+
+        <div class="space-y-6">
+          <div class="flex items-start space-x-4">
+            <div
+              class="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+            >
+              <i class="fas fa-map-marker-alt text-blue-600"></i>
+            </div>
+            <div>
+              <h3 class="font-semibold text-lg">Our Location</h3>
+              <p class="text-gray-600">
+                {% if site_config and site_config.address %} {{
+                site_config.address }} {% else %} Addis Ababa, Ethiopia {% endif
+                %}
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-start space-x-4">
+            <div
+              class="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+            >
+              <i class="fas fa-phone text-green-600"></i>
+            </div>
+            <div>
+              <h3 class="font-semibold text-lg">Phone Number</h3>
+              <p class="text-gray-600">
+                {% if site_config and site_config.phone_number %} {{
+                site_config.phone_number }} {% else %} +251 123 456 789 {% endif
+                %}
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-start space-x-4">
+            <div
+              class="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+            >
+              <i class="fas fa-envelope text-purple-600"></i>
+            </div>
+            <div>
+              <h3 class="font-semibold text-lg">Email Address</h3>
+              <p class="text-gray-600">
+                {% if site_config and site_config.contact_email %} {{
+                site_config.contact_email }} {% else %} contact@hagerbet.com {%
+                endif %}
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-start space-x-4">
+            <div
+              class="bg-yellow-100 w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+            >
+              <i class="fas fa-clock text-yellow-600"></i>
+            </div>
+            <div>
+              <h3 class="font-semibold text-lg">Business Hours</h3>
+              <p class="text-gray-600">
+                Monday - Friday: 8:00 AM - 6:00 PM<br />
+                Saturday: 9:00 AM - 4:00 PM<br />
+                Sunday: Closed
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FAQ Preview -->
+      <div class="bg-white rounded-lg shadow-md p-8">
+        <h2 class="text-2xl font-semibold mb-6">Frequently Asked Questions</h2>
+        <div id="faq-preview" class="space-y-4">
+          <!-- FAQs loaded via JavaScript -->
+        </div>
+        <a
+          href="{% url 'faq' %}"
+          class="inline-flex items-center text-blue-600 hover:text-blue-800 mt-4"
+        >
+          View all FAQs
+          <i class="fas fa-arrow-right ml-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script src="{% static 'js/contact.js' %}"></script>
+{% endblock %}

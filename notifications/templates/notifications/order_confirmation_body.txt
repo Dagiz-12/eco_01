@@ -1,0 +1,15 @@
+Hi {{ user.first_name }},
+
+Thank you for your order! Your order {{ order.order_number }} has been confirmed.
+
+Order Details:
+{% for item in order.items.all %}
+- {{ item.product.name }}: {{ item.quantity }} x ${{ item.price }}
+{% endfor %}
+
+Total: ${{ order.grand_total }}
+
+We'll notify you when your order ships.
+
+Thank you for shopping with us!
+The HagerBet Team

@@ -1,0 +1,11 @@
+Django==4.2.7
+djangorestframework==3.14.0
+django-cors-headers==4.3.1
+Pillow==10.0.1
+python-decouple==3.8
+
+# For production (commented for now)
+# gunicorn==21.2.0
+# psycopg2-binary==2.9.7
+# whitenoise==6.5.0
+# celery==5.3.1

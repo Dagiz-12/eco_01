@@ -1,0 +1,200 @@
+{% extends 'base.html' %} {% load static %} {% block title %}Register -
+HagerBet{% endblock %} {% block content %}
+<div
+  class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8"
+>
+  <div class="sm:mx-auto sm:w-full sm:max-w-md">
+    <h2 class="mt-6 text-center text-3xl font-bold text-gray-900">
+      Create your account
+    </h2>
+    <p class="mt-2 text-center text-sm text-gray-600">
+      Or
+      <a
+        href="{% url 'users:login' %}"
+        class="font-medium text-blue-600 hover:text-blue-500"
+      >
+        sign in to your existing account
+      </a>
+    </p>
+  </div>
+
+  <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+    <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+      <form
+        id="register-form"
+        method="post"
+        action="{% url 'users:register' %}"
+      >
+        {% csrf_token %}
+
+        <div class="space-y-6">
+          <!-- Email -->
+          <div class="form-group">
+            <label for="email" class="form-label">Email address</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              required
+              class="form-input"
+              placeholder="Enter your email"
+            />
+            <div id="email-error" class="error-message hidden"></div>
+          </div>
+
+          <!-- Username -->
+          <div class="form-group">
+            <label for="username" class="form-label">Username</label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              autocomplete="username"
+              required
+              class="form-input"
+              placeholder="Choose a username"
+            />
+            <div id="username-error" class="error-message hidden"></div>
+          </div>
+
+          <!-- Password -->
+          <div class="form-group">
+            <label for="password" class="form-label">Password</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autocomplete="new-password"
+              required
+              class="form-input"
+              placeholder="Create a password"
+            />
+            <div class="password-strength mt-2 hidden">
+              <div class="flex space-x-1">
+                <div class="h-1 flex-1 bg-gray-200 rounded"></div>
+                <div class="h-1 flex-1 bg-gray-200 rounded"></div>
+                <div class="h-1 flex-1 bg-gray-200 rounded"></div>
+                <div class="h-1 flex-1 bg-gray-200 rounded"></div>
+              </div>
+              <p class="text-xs mt-1 text-gray-500"></p>
+            </div>
+          </div>
+
+          <!-- Confirm Password -->
+          <div class="form-group">
+            <label for="password2" class="form-label">Confirm Password</label>
+            <input
+              id="password2"
+              name="password2"
+              type="password"
+              autocomplete="new-password"
+              required
+              class="form-input"
+              placeholder="Confirm your password"
+            />
+            <div id="password-error" class="error-message hidden"></div>
+          </div>
+
+          <!-- Role Selection -->
+          <div class="form-group">
+            <label class="form-label">Account Type</label>
+            <div class="grid grid-cols-2 gap-4">
+              <label class="role-option cursor-pointer">
+                <input
+                  type="radio"
+                  name="role"
+                  value="customer"
+                  class="sr-only"
+                  checked
+                />
+                <div
+                  class="border-2 border-gray-200 rounded-lg p-4 text-center hover:border-blue-500 transition-colors"
+                >
+                  <i class="fas fa-user text-2xl text-gray-400 mb-2"></i>
+                  <div class="font-medium">Customer</div>
+                  <div class="text-xs text-gray-500">
+                    Shop and purchase products
+                  </div>
+                </div>
+              </label>
+              <label class="role-option cursor-pointer">
+                <input
+                  type="radio"
+                  name="role"
+                  value="seller"
+                  class="sr-only"
+                />
+                <div
+                  class="border-2 border-gray-200 rounded-lg p-4 text-center hover:border-blue-500 transition-colors"
+                >
+                  <i class="fas fa-store text-2xl text-gray-400 mb-2"></i>
+                  <div class="font-medium">Seller</div>
+                  <div class="text-xs text-gray-500">Sell your products</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Terms Agreement -->
+          <div class="flex items-center">
+            <input
+              id="terms"
+              name="terms"
+              type="checkbox"
+              required
+              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label for="terms" class="ml-2 block text-sm text-gray-900">
+              I agree to the
+              <a href="#" class="text-blue-600 hover:text-blue-500"
+                >Terms and Conditions</a
+              >
+              and
+              <a href="#" class="text-blue-600 hover:text-blue-500"
+                >Privacy Policy</a
+              >
+            </label>
+          </div>
+
+          <div>
+            <button type="submit" class="w-full btn-primary py-3 text-lg">
+              Create Account
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <div class="mt-6">
+        <div class="relative">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-gray-300"></div>
+          </div>
+          <div class="relative flex justify-center text-sm">
+            <span class="px-2 bg-white text-gray-500">Or continue with</span>
+          </div>
+        </div>
+
+        <div class="mt-6 grid grid-cols-2 gap-3">
+          <a
+            href="#"
+            class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+          >
+            <i class="fab fa-google text-red-500"></i>
+            <span class="ml-2">Google</span>
+          </a>
+          <a
+            href="#"
+            class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+          >
+            <i class="fab fa-facebook text-blue-600"></i>
+            <span class="ml-2">Facebook</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script src="{% static 'js/auth.js' %}"></script>
+{% endblock %}
