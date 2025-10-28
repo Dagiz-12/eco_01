@@ -139,14 +139,14 @@ def faq_list_view(request):
     })
 
 
+# In home/views.py - FIX THE BUG in featured_products_view
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def featured_products_view(request):
     """API endpoint for featured products"""
-    # ✅ FIXED: Use 'status' instead of 'is_active'
     products = Product.objects.filter(
         is_featured=True,
-        status='published'  # Changed from 'is_active=True'
+        status='published'
     ).select_related('category', 'brand')[:12]
 
     product_data = []
@@ -165,7 +165,7 @@ def featured_products_view(request):
         })
 
     return Response({
-        'success': False,  # ✅ FIXED: Changed to True
+        'success': True,  # ✅ FIXED: Changed from False to True
         'products': product_data
     })
 

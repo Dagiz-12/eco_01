@@ -182,6 +182,17 @@ class Product(models.Model):
         """Number of times this product has been added to wishlists"""
         return self.wishlist_items.count()
 
+    # Add this method to products/models.py in Product class
+
+    @property
+    def primary_image(self):
+        """Get the primary product image or first available image"""
+        primary = self.images.filter(is_primary=True).first()
+        if primary:
+            return primary.image
+        first_image = self.images.first()
+        return first_image.image if first_image else None
+
 
 class ProductImage(models.Model):
     product = models.ForeignKey(

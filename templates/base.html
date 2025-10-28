@@ -327,27 +327,55 @@
         }
       }
 
-      async function loadCategoriesDropdown() {
-        try {
-          const response = await fetch("/api/home/categories/");
-          if (response.ok) {
+      // In base.html - FIX THE CATEGORIES API CALL
+// FIX THE CATEGORIES DROPDOWN FUNCTION
+async function loadCategoriesDropdown() {
+    try {
+        // ✅ CORRECT ENDPOINT - use the one that exists
+        const response = await fetch("/api/home/categories/"); 
+        if (response.ok) {
             const data = await response.json();
             const dropdown = document.getElementById("categories-dropdown");
-            if (dropdown && data.categories) {
-              data.categories.slice(0, 6).forEach((category) => {
+            if (dropdown && data.success && data.categories) {
+                // Clear existing items except "All Categories"
+                const allCategories = dropdown.querySelector('a[href*="products"]');
+                dropdown.innerHTML = '';
+                if (allCategories) dropdown.appendChild(allCategories);
+                
+                data.categories.slice(0, 6).forEach((category) => {
+                    const link = document.createElement("a");
+                    link.href = `/products/category/${category.slug}/`;
+                    link.className = "block px-4 py-2 text-gray-700 hover:bg-gray-100";
+                    link.textContent = category.name;
+                    dropdown.appendChild(link);
+                });
+            }
+        }
+    } catch (error) {
+        console.error("Failed to load categories:", error);
+        // Fallback to static categories
+        const dropdown = document.getElementById("categories-dropdown");
+        if (dropdown) {
+            const fallbackCategories = [
+                {name: "Electronics", slug: "electronics"},
+                {name: "Clothing", slug: "clothing"},
+                {name: "Home & Garden", slug: "home-garden"},
+                {name: "Sports", slug: "sports"}
+            ];
+            
+            fallbackCategories.forEach(category => {
                 const link = document.createElement("a");
-                link.href = `/products/?category=${category.id}`;
-                link.className =
-                  "block px-4 py-2 text-gray-700 hover:bg-gray-100";
+                link.href = `/products/category/${category.slug}/`;
+                link.className = "block px-4 py-2 text-gray-700 hover:bg-gray-100";
                 link.textContent = category.name;
                 dropdown.appendChild(link);
-              });
-            }
-          }
-        } catch (error) {
-          console.error("Failed to load categories:", error);
+            });
         }
-      }
+    }
+} catch (error) {
+        console.error("Failed to load categories:", error);
+    }
+
     </script>
     <script src="{% static 'js/navigation.js' %}"></script>
 
