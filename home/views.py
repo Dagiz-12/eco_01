@@ -1,3 +1,4 @@
+from django.shortcuts import render
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.views.generic import TemplateView
@@ -242,3 +243,6 @@ def handler404(request, exception):
 
 def handler500(request):
     return render(request, 'home/500.html', status=500)
+
+
+# HTML Views

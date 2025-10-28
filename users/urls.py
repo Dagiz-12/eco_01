@@ -6,19 +6,21 @@ from . import views
 app_name = 'users'
 
 # API URLs
-urlpatterns = [
-    # Authentication endpoints
+api_patterns = [
     path('register/', UserRegistrationView.as_view(), name='user-register'),
     path('login/', UserLoginView.as_view(), name='user-login'),
     path('logout/', UserLogoutView.as_view(), name='user-logout'),
     path('profile/', UserProfileView.as_view(), name='user-profile'),
-
-    # Additional user management endpoints
-    path('profile/update/', UserProfileView.as_view(), name='user-profile-update'),
 ]
 
-# For future ViewSet expansion
-router = DefaultRouter()
-# router.register('addresses', AddressViewSet, basename='address')
+# HTML View URLs
+html_patterns = [
+    path('login/', views.login_page, name='login'),
+    path('register/', views.register_page, name='register'),
+    path('profile/', views.profile_page, name='profile'),
+]
 
-urlpatterns += router.urls
+urlpatterns = [
+    path('api/', include(api_patterns)),
+    path('', include(html_patterns)),
+]

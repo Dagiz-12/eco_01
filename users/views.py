@@ -5,6 +5,7 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth import login
 from .models import User, Profile
 from .serializers import UserRegistrationSerializer, UserLoginSerializer, UserProfileSerializer
+from django.shortcuts import render
 
 
 class UserRegistrationView(APIView):
@@ -81,3 +82,15 @@ class UserLogoutView(APIView):
         logout(request)
 
         return Response({'message': 'Logged out successfully'}, status=status.HTTP_200_OK)
+
+
+def login_page(request):
+    return render(request, 'users/login.html')
+
+
+def register_page(request):
+    return render(request, 'users/register.html')
+
+
+def profile_page(request):
+    return render(request, 'users/profile.html')

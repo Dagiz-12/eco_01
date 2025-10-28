@@ -1,0 +1,81 @@
+<!-- templates/includes/header.html -->
+<!-- Hero Section -->
+<section class="bg-gradient-to-r from-blue-600 to-purple-700 text-white py-20">
+  <div class="max-w-7xl mx-auto px-4 text-center">
+    <h1 class="text-5xl font-bold mb-6">
+      {% if home_content.hero and home_content.hero.title %} {{
+      home_content.hero.title }} {% else %} Welcome to HagerBet {% endif %}
+    </h1>
+    <p class="text-xl mb-8 max-w-3xl mx-auto">
+      {% if home_content.hero and home_content.hero.subtitle %}
+      <!--the man -->
+      {{ home_content.hero.subtitle }} {% else %} Discover amazing products with
+      fast delivery, secure payments, and exceptional customer service.
+      <!--ok -->
+      {% endif %}
+    </p>
+    <div
+      class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4"
+    >
+      <a
+        href="{% url 'products:product-list' %}"
+        class="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+      >
+        Start Shopping
+      </a>
+      {% if not user.is_authenticated %}
+      <a
+        href="{% url 'users:register' %}"
+        class="bg-transparent border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition-colors"
+      >
+        Create Account
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-16 bg-gray-50">
+  <div class="max-w-7xl mx-auto px-4">
+    <h2 class="text-3xl font-bold text-center mb-12">
+      {% if home_content.features and home_content.features.title %} {{
+      home_content.features.title }} {% else %} Why Shop With Us? {% endif %}
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div class="text-center">
+        <div
+          class="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+        >
+          <i class="fas fa-shipping-fast text-blue-600 text-2xl"></i>
+        </div>
+        <h3 class="text-xl font-semibold mb-2">Fast Delivery</h3>
+        <p class="text-gray-600">
+          Free shipping on orders over $50. Delivery within 2-3 business days.
+        </p>
+      </div>
+      <div class="text-center">
+        <div
+          class="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+        >
+          <i class="fas fa-shield-alt text-green-600 text-2xl"></i>
+        </div>
+        <h3 class="text-xl font-semibold mb-2">Secure Payments</h3>
+        <p class="text-gray-600">
+          Your payments are secure with our encrypted payment system.
+        </p>
+      </div>
+      <div class="text-center">
+        <div
+          class="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+        >
+          <i class="fas fa-headset text-purple-600 text-2xl"></i>
+        </div>
+        <h3 class="text-xl font-semibold mb-2">24/7 Support</h3>
+        <p class="text-gray-600">
+          Our customer support team is here to help you anytime.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
