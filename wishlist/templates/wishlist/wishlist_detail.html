@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Wishlist - HagerBet{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">My Wishlist</h1>
+                <p class="text-gray-600">Save items you love for later</p>
+            </div>
+            <div class="flex space-x-3">
+                <button id="share-wishlist-btn" class="btn-outline">
+                    <i class="fas fa-share mr-2"></i>Share Wishlist
+                </button>
+                <button id="move-all-to-cart" class="btn-primary">
+                    <i class="fas fa-shopping-cart mr-2"></i>Move All to Cart
+                </button>
+            </div>
+        </div>
+
+        <!-- Bulk Actions -->
+        <div class="bg-white rounded-lg shadow-md p-4 mb-6 hidden" id="bulk-actions">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <span id="selected-count" class="font-semibold">0 items selected</span>
+                    <button id="move-selected-to-cart" class="btn-primary text-sm">
+                        Move to Cart
+                    </button>
+                    <button id="remove-selected-from-wishlist" class="btn-outline text-sm text-red-600 border-red-600">
+                        Remove Selected
+                    </button>
+                </div>
+                <button id="clear-selection" class="text-gray-500 hover:text-gray-700">
+                    Clear Selection
+                </button>
+            </div>
+        </div>
+
+        <!-- Wishlist Items -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div id="wishlist-items-container">
+                <!-- Items loaded by wishlist.js -->
+                <div class="text-center py-12">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p class="text-gray-600">Loading wishlist items...</p>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="wishlist-empty-state" class="hidden text-center py-12">
+                <i class="fas fa-heart text-6xl text-gray-300 mb-4"></i>
+                <h3 class="text-xl font-semibold text-gray-700 mb-2">Your wishlist is empty</h3>
+                <p class="text-gray-600 mb-6">Start adding items you love to your wishlist</p>
+                <a href="{% url 'products:product_list' %}" class="btn-primary inline-block">
+                    <i class="fas fa-shopping-bag mr-2"></i>Start Shopping
+                </a>
+            </div>
+        </div>
+
+        <!-- Wishlist Stats -->
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-blue-50 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-blue-600" id="wishlist-item-count">0</div>
+                <div class="text-blue-800">Items in Wishlist</div>
+            </div>
+            <div class="bg-green-50 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-green-600" id="wishlist-total-value">$0.00</div>
+                <div class="text-green-800">Total Value</div>
+            </div>
+            <div class="bg-purple-50 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-purple-600" id="wishlist-available-items">0</div>
+                <div class="text-purple-800">Available Items</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // wishlist.js will handle all functionality
+        console.log('Wishlist page loaded - wishlist.js will handle functionality');
+    });
+</script>
+{% endblock %}

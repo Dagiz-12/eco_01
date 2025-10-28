@@ -1,0 +1,7 @@
+# .prettierignore
+*.html
+templates/
+**/templates/**
+**/templates/**/*
+*.sql
+*.py

@@ -1,3 +1,4 @@
+from django.shortcuts import render
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -195,3 +196,14 @@ class CartMergeView(APIView):
                 {'error': 'Session cart not found'},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+
+# Add to cart/views.py
+
+
+def cart_page(request):
+    return render(request, 'cart/cart_detail.html')
+
+
+def cart_summary_page(request):
+    return render(request, 'cart/cart_summary.html')

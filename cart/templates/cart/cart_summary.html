@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Cart Summary - HagerBet{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-900 mb-8">Cart Summary</h1>
+        
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div id="cart-summary-content">
+                <!-- Content loaded by cart.js -->
+                <div class="text-center py-8">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p class="text-gray-600">Loading cart summary...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

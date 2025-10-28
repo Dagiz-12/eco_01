@@ -1,5 +1,6 @@
-{% extends 'base.html' %} {% load static %} {% block title %}Login - HagerBet{%
-endblock %} {% block content %}
+{% extends 'base.html' %} {% load static %} {% block title %}Login - HagerBet
+<!--ok -->
+{% endblock %} {% block content %}
 <div
   class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8"
 >
@@ -47,7 +48,7 @@ endblock %} {% block content %}
 
       <div class="text-center">
         <a
-          href="{% url 'users:user-register' %}"
+          href="{% url 'users:register' %}"
           class="text-blue-600 hover:text-blue-500"
         >
           Don't have an account? Sign up

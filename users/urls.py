@@ -5,7 +5,14 @@ from . import views
 
 app_name = 'users'
 
-# API URLs
+# HTML View URLs - SPECIFIC PATHS FIRST
+html_patterns = [
+    path('login/', views.login_page, name='login'),
+    path('register/', views.register_page, name='register'),
+    path('profile/', views.profile_page, name='profile'),
+]
+
+# API URLs - UNDER api/ NAMESPACE
 api_patterns = [
     path('register/', UserRegistrationView.as_view(), name='user-register'),
     path('login/', UserLoginView.as_view(), name='user-login'),
@@ -13,14 +20,12 @@ api_patterns = [
     path('profile/', UserProfileView.as_view(), name='user-profile'),
 ]
 
-# HTML View URLs
-html_patterns = [
+urlpatterns = [
+    # HTML routes first (specific paths)
     path('login/', views.login_page, name='login'),
     path('register/', views.register_page, name='register'),
     path('profile/', views.profile_page, name='profile'),
-]
 
-urlpatterns = [
+    # API routes under api/ prefix
     path('api/', include(api_patterns)),
-    path('', include(html_patterns)),
 ]

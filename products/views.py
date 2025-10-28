@@ -1,3 +1,7 @@
+from .models import Product, Category, Brand
+from django.db.models import Q
+from django.views.generic import ListView, DetailView
+from django.shortcuts import render
 from rest_framework import generics, status, filters
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -251,3 +255,125 @@ class ProductAdminViewSet(ModelViewSet):
             {'error': 'Inventory tracking is disabled for this product'},
             status=status.HTTP_400_BAD_REQUEST
         )
+
+
+# products/views.py - ADD THESE HTML VIEWS
+
+# HTML Template Views
+
+class ProductListView(ListView):
+    model = Product
+    template_name = 'products/product_list.html'
+    context_object_name = 'products'
+    paginate_by = 12
+
+    def get_queryset(self):
+        queryset = Product.objects.filter(status='published').select_related(
+            'category', 'brand'
+        ).prefetch_related('images')
+
+        # Handle category filter
+        category_slug = self.request.GET.get('category')
+        if category_slug:
+            queryset = queryset.filter(category__slug=category_slug)
+
+        # Handle brand filter
+        brand_slug = self.request.GET.get('brand')
+        if brand_slug:
+            queryset = queryset.filter(brand__slug=brand_slug)
+
+        # Handle search
+        search_query = self.request.GET.get('q')
+        if search_query:
+            queryset = queryset.filter(
+                Q(name__icontains=search_query) |
+                Q(description__icontains=search_query) |
+                Q(short_description__icontains=search_query) |
+                Q(category__name__icontains=search_query) |
+                Q(brand__name__icontains=search_query)
+            )
+
+        # Handle price range
+        min_price = self.request.GET.get('min_price')
+        max_price = self.request.GET.get('max_price')
+        if min_price:
+            queryset = queryset.filter(price__gte=min_price)
+        if max_price:
+            queryset = queryset.filter(price__lte=max_price)
+
+        # Handle in-stock filter
+        in_stock = self.request.GET.get('in_stock')
+        if in_stock:
+            queryset = queryset.filter(quantity__gt=0)
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['categories'] = Category.objects.filter(
+            is_active=True, parent__isnull=True)
+        context['brands'] = Brand.objects.filter(is_active=True)
+        context['search_query'] = self.request.GET.get('q', '')
+        context['selected_category'] = self.request.GET.get('category', '')
+        context['selected_brand'] = self.request.GET.get('brand', '')
+        return context
+
+
+class ProductDetailView(DetailView):
+    model = Product
+    template_name = 'products/product_detail.html'
+    context_object_name = 'product'
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
+
+    def get_queryset(self):
+        return Product.objects.filter(status='published').select_related(
+            'category', 'brand'
+        ).prefetch_related('images', 'variants', 'attributes')
+
+
+class CategoryDetailView(DetailView):
+    model = Category
+    template_name = 'products/category_detail.html'
+    context_object_name = 'category'
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        category = self.get_object()
+
+        # Get products in this category and subcategories
+        categories = [category]
+        categories.extend(category.children.filter(is_active=True))
+
+        context['products'] = Product.objects.filter(
+            category__in=categories,
+            status='published'
+        ).select_related('category', 'brand').prefetch_related('images')
+
+        return context
+
+
+def product_search(request):
+    """Simple search view for GET requests"""
+    query = request.GET.get('q', '')
+    products = Product.objects.filter(status='published')
+
+    if query:
+        products = products.filter(
+            Q(name__icontains=query) |
+            Q(description__icontains=query) |
+            Q(short_description__icontains=query) |
+            Q(category__name__icontains=query) |
+            Q(brand__name__icontains=query)
+        )
+
+    context = {
+        'products': products,
+        'search_query': query,
+        'categories': Category.objects.filter(is_active=True, parent__isnull=True),
+        'brands': Brand.objects.filter(is_active=True),
+    }
+
+    return render(request, 'products/product_list.html', context)

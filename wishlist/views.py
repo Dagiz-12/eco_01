@@ -1,3 +1,4 @@
+from django.shortcuts import render
 from rest_framework import generics, status, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -203,3 +204,14 @@ class CheckProductInWishlistView(generics.GenericAPIView):
             'product_id': product_id,
             'is_in_wishlist': is_in_wishlist
         })
+
+
+# Add to wishlist/views.py
+
+
+def wishlist_page(request):
+    return render(request, 'wishlist/wishlist_detail.html')
+
+
+def wishlist_share_page(request, share_token):
+    return render(request, 'wishlist/public_wishlist.html')

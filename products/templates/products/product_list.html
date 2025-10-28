@@ -1,204 +1,204 @@
-{% extends 'base.html' %} {% load static %} {% block title %}Products -
-HagerBet{% endblock %} {% block content %}
-<div class="max-w-7xl mx-auto px-4 py-8">
-  <!-- Header -->
+<!-- templates/products/product_list.html -->
+{% extends 'base.html' %} {% load static %} {% block title %}Products - HagerBet{% endblock %} {% block content %}
+<div class="container mx-auto px-4 py-8">
+  <!-- Page Header -->
   <div class="mb-8">
-    <h1 class="text-3xl font-bold text-gray-900 mb-2">Our Products</h1>
-    <p class="text-gray-600">Discover our amazing collection of products</p>
+    <h1 class="text-3xl font-bold text-gray-800 mb-2">
+      {% if search_query %}Search Results for "{{ search_query }}"{% elif selected_category %}{{ selected_category|title }}{% else %}All Products{% endif %}
+    </h1>
+    <p class="text-gray-600">{{ products.paginator.count }} products found</p>
   </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+  <div class="flex flex-col lg:flex-row gap-8">
     <!-- Sidebar Filters -->
-    <div class="lg:col-span-1">
-      <div class="bg-white rounded-lg shadow-md p-6 sticky top-4">
-        <!-- Search -->
-        <form id="product-search-form" class="mb-6">
-          <div class="form-group">
-            <label class="form-label">Search Products</label>
-            <div class="relative">
-              <input
-                type="text"
-                name="q"
-                placeholder="Search..."
-                class="form-input pr-10"
-              />
-              <button
-                type="submit"
-                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <i class="fas fa-search"></i>
-              </button>
-            </div>
-          </div>
-        </form>
-
-        <!-- Categories Filter -->
+    <div class="lg:w-1/4">
+      <div class="bg-white rounded-lg shadow-sm p-6 sticky top-24">
+        <!-- Search Box -->
         <div class="mb-6">
-          <h3 class="font-semibold text-lg mb-3">Categories</h3>
-          <div class="space-y-2">
+          <form action="{% url 'products:product_search' %}" method="get">
+            <input
+              type="text"
+              name="q"
+              value="{{ search_query }}"
+              placeholder="Search products..."
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </form>
+        </div>
+
+        <!-- Categories -->
+        <div class="mb-6">
+          <h3 class="font-semibold text-gray-800 mb-3">Categories</h3>
+          <ul class="space-y-2">
+            <li>
+              <a
+                href="{% url 'products:product_list' %}"
+                class="block text-gray-600 hover:text-blue-600 {% if not selected_category %}text-blue-600 font-semibold{% endif %}"
+              >
+                All Categories
+              </a>
+            </li>
             {% for category in categories %}
-            <label class="flex items-center">
-              <input
-                type="checkbox"
-                name="category"
-                value="{{ category.id }}"
-                class="product-filter rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span class="ml-2 text-sm text-gray-700"
-                >{{ category.name }}</span
+            <li>
+              <a
+                href="{% url 'products:product_list' %}?category={{ category.slug }}"
+                class="block text-gray-600 hover:text-blue-600 {% if selected_category == category.slug %}text-blue-600 font-semibold{% endif %}"
               >
-              <span class="ml-auto text-xs text-gray-500"
-                >({{ category.product_count }})</span
-              >
-            </label>
+                {{ category.name }}
+              </a>
+            </li>
             {% endfor %}
-          </div>
+          </ul>
         </div>
 
-        <!-- Price Range -->
+        <!-- Brands -->
         <div class="mb-6">
-          <h3 class="font-semibold text-lg mb-3">Price Range</h3>
-          <div class="space-y-2">
-            <label class="flex items-center">
-              <input
-                type="radio"
-                name="price_range"
-                value="0-50"
-                class="product-filter rounded-full border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span class="ml-2 text-sm text-gray-700">Under $50</span>
-            </label>
-            <label class="flex items-center">
-              <input
-                type="radio"
-                name="price_range"
-                value="50-100"
-                class="product-filter rounded-full border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span class="ml-2 text-sm text-gray-700">$50 - $100</span>
-            </label>
-            <label class="flex items-center">
-              <input
-                type="radio"
-                name="price_range"
-                value="100-200"
-                class="product-filter rounded-full border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span class="ml-2 text-sm text-gray-700">$100 - $200</span>
-            </label>
-            <label class="flex items-center">
-              <input
-                type="radio"
-                name="price_range"
-                value="200+"
-                class="product-filter rounded-full border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span class="ml-2 text-sm text-gray-700">Over $200</span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Brands Filter -->
-        <div class="mb-6">
-          <h3 class="font-semibold text-lg mb-3">Brands</h3>
-          <div class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+          <h3 class="font-semibold text-gray-800 mb-3">Brands</h3>
+          <ul class="space-y-2">
             {% for brand in brands %}
-            <label class="flex items-center">
-              <input
-                type="checkbox"
-                name="brand"
-                value="{{ brand.id }}"
-                class="product-filter rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span class="ml-2 text-sm text-gray-700">{{ brand.name }}</span>
-            </label>
+            <li>
+              <a
+                href="{% url 'products:product_list' %}?brand={{ brand.slug }}"
+                class="block text-gray-600 hover:text-blue-600"
+              >
+                {{ brand.name }}
+              </a>
+            </li>
             {% endfor %}
-          </div>
+          </ul>
         </div>
-
-        <!-- Clear Filters -->
-        <button id="clear-filters" class="w-full btn-outline text-sm">
-          <i class="fas fa-times mr-2"></i>Clear All Filters
-        </button>
       </div>
     </div>
 
     <!-- Products Grid -->
-    <div class="lg:col-span-3">
-      <!-- Toolbar -->
-      <div class="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div
-          class="flex flex-col sm:flex-row justify-between items-center space-y-3 sm:space-y-0"
-        >
-          <div class="text-sm text-gray-600">
-            Showing <span id="products-count">0</span> products
-          </div>
-
-          <div class="flex items-center space-x-4">
-            <label class="text-sm text-gray-700">Sort by:</label>
-            <select id="product-sort" class="form-select text-sm w-48">
-              <option value="name">Name (A-Z)</option>
-              <option value="-name">Name (Z-A)</option>
-              <option value="price">Price (Low to High)</option>
-              <option value="-price">Price (High to Low)</option>
-              <option value="-created_at">Newest First</option>
-              <option value="-average_rating">Highest Rated</option>
-            </select>
-          </div>
+    <div class="lg:w-3/4">
+      <!-- Sorting and View Options -->
+      <div class="flex justify-between items-center mb-6">
+        <div class="text-sm text-gray-600">
+          Showing {{ products.start_index }}-{{ products.end_index }} of {{ products.paginator.count }} products
         </div>
       </div>
 
-      <!-- Products Container -->
-      <div id="products-loading" class="text-center py-8 hidden">
-        <div class="spinner mx-auto h-8 w-8 border-b-2 border-blue-600"></div>
-        <p class="mt-2 text-gray-600">Loading products...</p>
-      </div>
+      <!-- Products -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for product in products %}
+        <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+          <div class="relative">
+            <img
+              src="{% if product.primary_image %}{{ product.primary_image.url }}{% else %}{% static 'images/placeholder.jpg' %}{% endif %}"
+              alt="{{ product.name }}"
+              class="w-full h-48 object-cover"
+            />
+            {% if product.compare_price and product.compare_price > product.price %}
+            <span class="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-xs">
+              {{ product.discount_percentage }}% OFF
+            </span>
+            {% endif %}
+            {% if product.is_featured %}
+            <span class="absolute top-2 right-2 bg-yellow-500 text-white px-2 py-1 rounded text-xs">
+              Featured
+            </span>
+            {% endif %}
+          </div>
 
-      <div
-        id="products-container"
-        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
-      >
-        <!-- Products will be loaded here via AJAX -->
+          <div class="p-4">
+            <h3 class="font-semibold text-lg mb-2 truncate">
+              <a href="{% url 'products:product_detail' product.slug %}" class="hover:text-blue-600">
+                {{ product.name }}
+              </a>
+            </h3>
+
+            <div class="flex items-center mb-2">
+              <div class="text-yellow-400">★★★★☆</div>
+              <span class="text-sm text-gray-600 ml-2">({{ product.review_count }})</span>
+            </div>
+
+            <div class="price-section mb-3">
+              <span class="current-price text-xl font-bold text-green-600">
+                ${{ product.price }}
+              </span>
+              {% if product.compare_price and product.compare_price > product.price %}
+              <span class="original-price text-sm text-gray-500 line-through ml-2">
+                ${{ product.compare_price }}
+              </span>
+              {% endif %}
+            </div>
+
+            <div class="flex space-x-2">
+              <button
+                class="add-to-cart-btn flex-1 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                data-product-id="{{ product.id }}"
+                {% if not product.is_in_stock %}disabled{% endif %}
+              >
+                <i class="fas fa-shopping-cart mr-2"></i>
+                {% if product.is_in_stock %}Add to Cart{% else %}Out of Stock{% endif %}
+              </button>
+
+              <button
+                class="wishlist-toggle-btn bg-gray-200 text-gray-700 p-2 rounded hover:bg-gray-300 transition-colors"
+                data-product-id="{{ product.id }}"
+              >
+                <i class="far fa-heart"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full text-center py-12">
+          <i class="fas fa-search text-gray-400 text-4xl mb-4"></i>
+          <h3 class="text-xl font-semibold text-gray-600">No products found</h3>
+          <p class="text-gray-500 mt-2">Try adjusting your search or filters</p>
+          <a
+            href="{% url 'products:product_list' %}"
+            class="inline-block mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Browse All Products
+          </a>
+        </div>
+        {% endfor %}
       </div>
 
       <!-- Pagination -->
-      <div id="products-pagination" class="flex justify-center">
-        <!-- Pagination will be loaded here -->
+      {% if products.has_other_pages %}
+      <div class="mt-8 flex justify-center">
+        <nav class="flex items-center space-x-2">
+          {% if products.has_previous %}
+          <a
+            href="?page={{ products.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}"
+            class="px-3 py-2 border border-gray-300 rounded-md text-gray-500 hover:bg-gray-50"
+          >
+            Previous
+          </a>
+          {% endif %}
+          {% for num in products.paginator.page_range %}
+          {% if products.number == num %}
+          <span class="px-3 py-2 border border-blue-500 bg-blue-500 text-white rounded-md">
+            {{ num }}
+          </span>
+          {% else %}
+          <a
+            href="?page={{ num }}{% if search_query %}&q={{ search_query }}{% endif %}"
+            class="px-3 py-2 border border-gray-300 rounded-md text-gray-500 hover:bg-gray-50"
+          >
+            {{ num }}
+          </a>
+          {% endif %}
+          {% endfor %}
+          {% if products.has_next %}
+          <a
+            href="?page={{ products.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}"
+            class="px-3 py-2 border border-gray-300 rounded-md text-gray-500 hover:bg-gray-50"
+          >
+            Next
+          </a>
+          {% endif %}
+        </nav>
       </div>
-
-      <!-- Load More Sentinel -->
-      <div id="load-more-sentinel" class="h-10"></div>
+      {% endif %}
     </div>
   </div>
 </div>
-
-<!-- Quick View Modal -->
-<div
-  id="quick-view-modal"
-  class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 hidden"
->
-  <!-- Modal content loaded via JavaScript -->
-</div>
-{% endblock %} {% block extra_js %}
+{% endblock %}
+{% block extra_js %}
 <script src="{% static 'js/products.js' %}"></script>
-<script>
-  // Clear filters functionality
-  document
-    .getElementById("clear-filters")
-    .addEventListener("click", function () {
-      // Clear all filter inputs
-      document.querySelectorAll(".product-filter").forEach((filter) => {
-        if (filter.type === "checkbox" || filter.type === "radio") {
-          filter.checked = false;
-        } else {
-          filter.value = "";
-        }
-      });
-
-      // Reset filters and reload products
-      productManager.filters = {};
-      productManager.currentPage = 1;
-      productManager.loadProducts();
-    });
-</script>
 {% endblock %}

@@ -1,23 +1,120 @@
-{% extends 'base.html' %}
-<!-- ok -->
-{% load static %} {% block title %}
-<!-- ok -->
+<!-- templates/home/home.html -->
+{% extends 'base.html' %} {% load static %} {% block title %}Home - HagerBet
+Premium E-Commerce{% endblock %} {% block content %}
+<!-- Hero Section -->
+<section class="bg-gradient-to-r from-blue-600 to-purple-700 text-white py-20">
+    <div class="container mx-auto px-4 text-center">
+        <h1 class="text-5xl font-bold mb-6">Welcome to HagerBet</h1>
+        <p class="text-xl mb-8 max-w-2xl mx-auto">
+            Discover premium products with exceptional quality and service. Your satisfaction is our priority.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="{% url 'products:product_list' %}" class="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+                Shop Now
+            </a>
+            <a href="#featured" class="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition-colors">
+                Featured Products
+            </a>
+        </div>
+    </div>
+</section>
 
-{% if site_config %} {{ site_config.site_name }} - Premium E-Commerce {% else %}
-HagerBet - Premium E-Commerce {% endif %} {% endblock %} {% block content %}
-<!-- Header Section -->
-{% include 'home/includes/header.html' %}
+<!-- Features Section -->
+<section class="py-16 bg-white">
+  <div class="container mx-auto px-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div class="text-center">
+        <div
+          class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4"
+        >
+          <i class="fas fa-shipping-fast text-blue-600 text-2xl"></i>
+        </div>
+        <h3 class="text-xl font-semibold mb-2">Free Shipping</h3>
+        <p class="text-gray-600">Free delivery on orders over $50</p>
+      </div>
+      <div class="text-center">
+        <div
+          class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"
+        >
+          <i class="fas fa-shield-alt text-green-600 text-2xl"></i>
+        </div>
+        <h3 class="text-xl font-semibold mb-2">Secure Payment</h3>
+        <p class="text-gray-600">100% secure payment processing</p>
+      </div>
+      <div class="text-center">
+        <div
+          class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4"
+        >
+          <i class="fas fa-headset text-purple-600 text-2xl"></i>
+        </div>
+        <h3 class="text-xl font-semibold mb-2">24/7 Support</h3>
+        <p class="text-gray-600">Dedicated customer support team</p>
+      </div>
+    </div>
+  </div>
+</section>
 
-<!-- Products Section -->
-{% include 'home/includes/products_section.html' %}
+<!-- Featured Products Section -->
+<section id="featured" class="py-16 bg-gray-50">
+  <div class="container mx-auto px-4">
+    <div class="text-center mb-12">
+      <h2 class="text-3xl font-bold text-gray-800 mb-4">Featured Products</h2>
+      <p class="text-gray-600 max-w-2xl mx-auto">
+        Handpicked selection of our most popular and high-quality products
+      </p>
+    </div>
+    <div
+      id="featured-products"
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+    >
+      <!-- Products will be loaded dynamically -->
+      <div class="text-center py-8">
+        <div
+          class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"
+        ></div>
+        <p class="mt-4 text-gray-600">Loading featured products...</p>
+      </div>
+    </div>
+  </div>
+</section>
 
-<!-- Testimonials Section -->
-{% include 'home/includes/testimonials_section.html' %}
+<!-- Categories Section -->
+<section class="py-16 bg-white">
+  <div class="container mx-auto px-4">
+    <div class="text-center mb-12">
+      <h2 class="text-3xl font-bold text-gray-800 mb-4">Shop by Category</h2>
+      <p class="text-gray-600">Explore our wide range of product categories</p>
+    </div>
+    <div id="categories-grid" class="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <!-- Categories will be loaded dynamically -->
+    </div>
+  </div>
+</section>
 
 <!-- Newsletter Section -->
-{% include 'home/includes/newsletter_section.html' %}
-
-<!-- Footer Section -->
-{% include 'home/includes/footer.html' %} {% endblock %} {% block extra_js %}
+<section class="py-16 bg-blue-600 text-white">
+  <div class="container mx-auto px-4 text-center">
+    <h2 class="text-3xl font-bold mb-4">Stay Updated</h2>
+    <p class="text-blue-100 mb-8 max-w-2xl mx-auto">
+      Subscribe to our newsletter for exclusive deals, new arrivals, and special
+      promotions
+    </p>
+    <form id="newsletter-form" class="max-w-md mx-auto flex">
+      <input
+        type="email"
+        placeholder="Enter your email"
+        class="flex-1 px-4 py-3 rounded-l-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        required
+      />
+      <button
+        type="submit"
+        class="bg-blue-800 px-6 py-3 rounded-r-lg font-semibold hover:bg-blue-900 transition-colors"
+      >
+        Subscribe
+      </button>
+    </form>
+  </div>
+</section>
+{% endblock %} {% block extra_js %}
 <script src="{% static 'js/home.js' %}"></script>
 {% endblock %}

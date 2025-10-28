@@ -1,278 +1,108 @@
-{% extends 'base.html' %} {% load static %} {% block title %}Shopping Cart -
-HagerBet{% endblock %} {% block content %}
-<div class="max-w-7xl mx-auto px-4 py-8">
-  <h1 class="text-3xl font-bold text-gray-900 mb-8">Shopping Cart</h1>
+{% extends 'base.html' %}
+{% load static %}
 
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-    <!-- Cart Items -->
-    <div class="lg:col-span-2">
-      <div class="bg-white rounded-lg shadow-md">
-        <div class="p-6 border-b border-gray-200">
-          <h2 class="text-xl font-semibold">
-            Cart Items ({{ cart.total_items }})
-          </h2>
+{% block title %}Shopping Cart - HagerBet{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Shopping Cart</h1>
+            <p class="text-gray-600">Review your items and proceed to checkout</p>
         </div>
 
-        <div id="cart-items-container">
-          {% if cart.items.all %} {% for item in cart.items.all %}
-          <div class="cart-item p-6 border-b border-gray-200 last:border-b-0">
-            <div class="flex items-center space-x-4">
-              <!-- Product Image -->
-              <div class="flex-shrink-0">
-                <img
-                  src="{{ item.product.primary_image.url }}"
-                  alt="{{ item.product.name }}"
-                  class="w-20 h-20 object-cover rounded-lg"
-                />
-              </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Cart Items -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div id="cart-items-container">
+                        <!-- Cart items will be loaded dynamically via cart.js -->
+                        <div class="text-center py-12">
+                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                            <p class="text-gray-600">Loading cart items...</p>
+                        </div>
+                    </div>
 
-              <!-- Product Details -->
-              <div class="flex-1 min-w-0">
-                <h3 class="text-lg font-semibold text-gray-900 truncate">
-                  {{ item.product.name }}
-                </h3>
-                {% if item.variant %}
-                <p class="text-sm text-gray-600">{{ item.variant.name }}</p>
-                {% endif %}
-                <p class="text-lg font-bold text-green-600 mt-1">
-                  ${{ item.price }}
-                </p>
-              </div>
-
-              <!-- Quantity Controls -->
-              <div class="flex items-center space-x-3">
-                <button
-                  class="decrease-quantity w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
-                  data-item-id="{{ item.id }}"
-                >
-                  <i class="fas fa-minus text-sm"></i>
-                </button>
-
-                <input
-                  type="number"
-                  value="{{ item.quantity }}"
-                  min="1"
-                  max="{{ item.product.quantity }}"
-                  class="cart-quantity w-16 text-center border border-gray-300 rounded py-1"
-                  data-item-id="{{ item.id }}"
-                  data-original-value="{{ item.quantity }}"
-                />
-
-                <button
-                  class="increase-quantity w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
-                  data-item-id="{{ item.id }}"
-                >
-                  <i class="fas fa-plus text-sm"></i>
-                </button>
-              </div>
-
-              <!-- Line Total -->
-              <div class="text-right">
-                <p class="text-lg font-bold text-gray-900">
-                  ${{ item.line_total }}
-                </p>
-                <button
-                  class="remove-from-cart-btn text-red-600 hover:text-red-800 text-sm mt-1"
-                  data-item-id="{{ item.id }}"
-                >
-                  <i class="fas fa-trash mr-1"></i>Remove
-                </button>
-              </div>
-            </div>
-          </div>
-          {% endfor %} {% else %}
-          <div class="p-8 text-center">
-            <i class="fas fa-shopping-cart text-4xl text-gray-300 mb-4"></i>
-            <h3 class="text-xl font-semibold text-gray-600 mb-2">
-              Your cart is empty
-            </h3>
-            <p class="text-gray-500 mb-4">
-              Start shopping to add items to your cart
-            </p>
-            <a href="{% url 'products:product-list' %}" class="btn-primary">
-              <i class="fas fa-shopping-bag mr-2"></i>Start Shopping
-            </a>
-          </div>
-          {% endif %}
-        </div>
-      </div>
-
-      <!-- Continue Shopping -->
-      {% if cart.items.all %}
-      <div class="mt-6">
-        <a href="{% url 'products:product-list' %}" class="btn-outline">
-          <i class="fas fa-arrow-left mr-2"></i>Continue Shopping
-        </a>
-      </div>
-      {% endif %}
-    </div>
-
-    <!-- Order Summary -->
-    <div class="lg:col-span-1">
-      <div class="bg-white rounded-lg shadow-md sticky top-4">
-        <div class="p-6 border-b border-gray-200">
-          <h2 class="text-xl font-semibold">Order Summary</h2>
-        </div>
-
-        <div class="p-6 space-y-4">
-          <!-- Subtotal -->
-          <div class="flex justify-between">
-            <span class="text-gray-600">Subtotal</span>
-            <span
-              id="cart-subtotal"
-              class="font-semibold"
-              data-amount="{{ cart.subtotal }}"
-            >
-              ${{ cart.subtotal }}
-            </span>
-          </div>
-
-          <!-- Shipping -->
-          <div class="flex justify-between">
-            <span class="text-gray-600">Shipping</span>
-            <span id="cart-shipping" class="font-semibold">
-              {% if cart.shipping_cost > 0 %} ${{ cart.shipping_cost }} {% else
-              %} Free {% endif %}
-            </span>
-          </div>
-
-          <!-- Tax -->
-          <div class="flex justify-between">
-            <span class="text-gray-600">Tax</span>
-            <span id="cart-tax" class="font-semibold"
-              >${{ cart.tax_amount }}</span
-            >
-          </div>
-
-          <!-- Coupon Discount -->
-          <div
-            id="coupon-discount-row"
-            class="flex justify-between text-green-600 hidden"
-          >
-            <span>Coupon Discount</span>
-            <span id="cart-discount" class="font-semibold">-$0.00</span>
-          </div>
-
-          <!-- Total -->
-          <div
-            class="flex justify-between text-lg font-bold border-t border-gray-200 pt-4"
-          >
-            <span>Total</span>
-            <span id="cart-total" class="text-green-600"
-              >${{ cart.grand_total }}</span
-            >
-          </div>
-
-          <!-- Coupon Section -->
-          <div class="mt-6 pt-6 border-t border-gray-200">
-            <form
-              id="apply-coupon-form"
-              data-order-amount="{{ cart.subtotal }}"
-            >
-              <div class="form-group">
-                <label class="form-label">Have a coupon?</label>
-                <div class="flex space-x-2">
-                  <input
-                    type="text"
-                    name="coupon_code"
-                    placeholder="Enter coupon code"
-                    class="form-input flex-1"
-                  />
-                  <button type="submit" class="btn-secondary whitespace-nowrap">
-                    Apply
-                  </button>
+                    <!-- Empty Cart State -->
+                    <div id="empty-cart" class="hidden text-center py-12">
+                        <i class="fas fa-shopping-cart text-6xl text-gray-300 mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-700 mb-2">Your cart is empty</h3>
+                        <p class="text-gray-600 mb-6">Start shopping to add items to your cart</p>
+                        <a href="{% url 'products:product_list' %}" class="btn-primary inline-block">
+                            <i class="fas fa-shopping-bag mr-2"></i>Continue Shopping
+                        </a>
+                    </div>
                 </div>
-              </div>
-            </form>
-
-            <!-- Applied Coupon Display -->
-            <div id="applied-coupon-display" class="mt-2"></div>
-
-            <!-- Available Coupons -->
-            <div class="mt-4">
-              <button
-                id="show-coupons-btn"
-                class="text-blue-600 hover:text-blue-800 text-sm"
-              >
-                <i class="fas fa-tag mr-1"></i>View Available Coupons
-              </button>
             </div>
-          </div>
 
-          <!-- Checkout Button -->
-          <div class="mt-6">
-            <a
-              href="{% url 'orders:checkout' %}"
-              class="w-full btn-primary text-center py-3 text-lg {% if not cart.items.all %}opacity-50 pointer-events-none{% endif %}"
-            >
-              <i class="fas fa-lock mr-2"></i>Proceed to Checkout
-            </a>
-          </div>
+            <!-- Order Summary -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-md p-6 sticky top-4">
+                    <h3 class="text-xl font-semibold mb-4">Order Summary</h3>
+                    
+                    <div id="order-summary">
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Subtotal:</span>
+                                <span id="cart-subtotal" class="font-semibold">$0.00</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Shipping:</span>
+                                <span id="cart-shipping-cost" class="font-semibold">$0.00</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Tax:</span>
+                                <span id="cart-tax-amount" class="font-semibold">$0.00</span>
+                            </div>
+                            <div class="border-t pt-3 flex justify-between text-lg font-bold">
+                                <span>Total:</span>
+                                <span id="cart-grand-total" class="text-green-600">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
 
-          <!-- Security Notice -->
-          <div class="text-xs text-gray-500 text-center mt-4">
-            <i class="fas fa-shield-alt mr-1"></i>
-            Secure checkout • SSL encrypted
-          </div>
+                    <!-- Checkout Button -->
+                    <div class="mt-6 space-y-3">
+                        <a href="{% url 'orders:order-create' %}" id="checkout-btn" class="w-full btn-primary py-3 text-center hidden">
+                            <i class="fas fa-lock mr-2"></i>Proceed to Checkout
+                        </a>
+                        
+                        <a href="{% url 'products:product_list' %}" class="w-full btn-outline py-3 text-center">
+                            <i class="fas fa-arrow-left mr-2"></i>Continue Shopping
+                        </a>
+                    </div>
+
+                    <!-- Security Badges -->
+                    <div class="mt-6 pt-6 border-t border-gray-200">
+                        <div class="flex justify-center space-x-4 text-gray-500">
+                            <div class="text-center">
+                                <i class="fas fa-shield-alt text-xl mb-2"></i>
+                                <p class="text-xs">Secure Payment</p>
+                            </div>
+                            <div class="text-center">
+                                <i class="fas fa-truck text-xl mb-2"></i>
+                                <p class="text-xs">Free Shipping</p>
+                            </div>
+                            <div class="text-center">
+                                <i class="fas fa-undo text-xl mb-2"></i>
+                                <p class="text-xs">Easy Returns</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-
-      <!-- Available Coupons Modal -->
-      <div
-        id="available-coupons-modal"
-        class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 hidden"
-      >
-        <div
-          class="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto"
-        >
-          <div class="p-6">
-            <div class="flex justify-between items-center mb-6">
-              <h3 class="text-xl font-semibold">Available Coupons</h3>
-              <button
-                class="close-coupons-modal text-gray-500 hover:text-gray-700"
-              >
-                <i class="fas fa-times text-2xl"></i>
-              </button>
-            </div>
-
-            <div id="available-coupons" class="space-y-4">
-              <!-- Coupons loaded via JavaScript -->
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
-  </div>
 </div>
-{% endblock %} {% block extra_js %}
-<script src="{% static 'js/cart.js' %}"></script>
-<script src="{% static 'js/coupons.js' %}"></script>
+{% endblock %}
 
+{% block extra_js %}
 <script>
-  // Available coupons modal
-  document
-    .getElementById("show-coupons-btn")
-    .addEventListener("click", function () {
-      document
-        .getElementById("available-coupons-modal")
-        .classList.remove("hidden");
-    });
-
-  document
-    .querySelector(".close-coupons-modal")
-    .addEventListener("click", function () {
-      document
-        .getElementById("available-coupons-modal")
-        .classList.add("hidden");
-    });
-
-  // Close modal when clicking outside
-  document
-    .getElementById("available-coupons-modal")
-    .addEventListener("click", function (e) {
-      if (e.target === this) {
-        this.classList.add("hidden");
-      }
+    // Initialize cart functionality when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // cart.js will handle the dynamic loading
+        console.log('Cart page loaded - cart.js will handle functionality');
     });
 </script>
 {% endblock %}

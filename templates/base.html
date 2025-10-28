@@ -1,122 +1,356 @@
+<!-- templates/base.html -->
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{% block title %}HagerBet E-Commerce{% endblock %}</title>
-
-    <!-- Load static files -->
-    {% load static %}
-
-    <!-- CSS -->
+    <title>{% block title %}HagerBet - Premium E-Commerce{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
       rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
-    <link
-      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
-      rel="stylesheet"
-    />
-    <link href="{% static 'css/base.css' %}" rel="stylesheet" />
-
-    <!-- CSRF Token for AJAX -->
-    <meta name="csrf-token" content="{{ csrf_token }}" />
+    {% block extra_css %}{% endblock %} {% load static %}
+    <!--ok -->
   </head>
   <body class="bg-gray-50">
-    <!-- Navigation -->
-    <nav class="bg-white shadow-lg">
-      <div class="max-w-7xl mx-auto px-4">
-        <div class="flex justify-between items-center py-4">
-          <div class="flex items-center space-x-8">
-            <a
-              href="{% url 'home:home' %}"
-              class="text-2xl font-bold text-blue-600"
-              >HagerBet</a
-            >
-
-            <!-- Navigation Links -->
-            <div class="hidden md:flex space-x-6">
-              <a href="{% url 'products:product-list' %}" class="nav-link"
-                >Products</a
+    <!-- Header -->
+    <header class="bg-white shadow-lg sticky top-0 z-50">
+      <div class="container mx-auto px-4">
+        <div class="flex items-center justify-between h-16">
+          <!-- Logo -->
+          <div class="flex items-center">
+            <a href="{% url 'home:home' %}" class="flex items-center space-x-2">
+              <div
+                class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center"
               >
-              <a href="{% url 'cart:cart-detail' %}" class="nav-link">
-                Cart <span id="cart-count" class="cart-badge">0</span>
-              </a>
-              <a href="{% url 'wishlist:wishlist-detail' %}" class="nav-link">
-                Wishlist
-                <span id="wishlist-count" class="wishlist-badge">0</span>
-              </a>
-            </div>
+                <span class="text-white font-bold text-lg">HB</span>
+              </div>
+              <span class="text-xl font-bold text-gray-800">HagerBet</span>
+            </a>
           </div>
 
-          <!-- User Menu -->
-          <div class="flex items-center space-x-4">
+          <!-- Search Bar -->
+          <div class="flex-1 max-w-2xl mx-8">
+            <form
+              action="{% url 'products:product_search' %}"
+              method="get"
+              class="relative"
+            >
+              <input
+                type="text"
+                name="q"
+                placeholder="Search products, brands, categories..."
+                class="w-full px-4 py-2 pl-10 pr-4 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <div class="absolute left-3 top-1/2 transform -translate-y-1/2">
+                <i class="fas fa-search text-gray-400"></i>
+              </div>
+              <button
+                type="submit"
+                class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 text-white px-4 py-1 rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Search
+              </button>
+            </form>
+          </div>
+
+          <!-- Navigation Icons -->
+          <div class="flex items-center space-x-6">
+            <!-- User Account -->
             {% if user.is_authenticated %}
             <div class="relative group">
-              <button class="user-menu-btn">
-                <i class="fas fa-user mr-2"></i>
-                {{ user.email }}
+              <button
+                class="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition-colors"
+              >
+                <i class="fas fa-user-circle text-xl"></i>
+                <span class="hidden md:block">{{ user.username }}</span>
+                <i class="fas fa-chevron-down text-xs"></i>
               </button>
-              <div class="user-dropdown">
-                <a href="{% url 'users:profile' %}" class="dropdown-item">
-                  <i class="fas fa-user-circle mr-2"></i>Profile
-                </a>
-                <a href="{% url 'orders:order-list' %}" class="dropdown-item">
-                  <i class="fas fa-shopping-bag mr-2"></i>Orders
-                </a>
-                <a
-                  href="{% url 'notifications:notification-list' %}"
-                  class="dropdown-item"
-                >
-                  <i class="fas fa-bell mr-2"></i>Notifications
-                  <span id="notification-count" class="notification-badge"
-                    >0</span
-                  >
-                </a>
-                <div class="dropdown-divider"></div>
-                <a
-                  href="{% url 'users:logout' %}"
-                  class="dropdown-item text-red-600"
-                >
-                  <i class="fas fa-sign-out-alt mr-2"></i>Logout
-                </a>
+              <div
+                class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-2 hidden group-hover:block"
+              >
+                <<a href="{% url 'users:profile' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+    <i class="fas fa-user mr-2"></i>Profile
+</a>
+                <a href="{% url 'orders:order-list' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+    <i class="fas fa-shopping-bag mr-2"></i>Orders
+</a>
+                <a href="{% url 'users:user-logout' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+    <i class="fas fa-sign-out-alt mr-2"></i>Logout
+</a>
               </div>
             </div>
             {% else %}
-            <a href="{% url 'users:login' %}" class="btn-secondary">Login</a>
-            <a href="{% url 'users:register' %}" class="btn-primary"
-              >Register</a
+            <a
+              href="{% url 'users:login' %}"
+              class="text-gray-700 hover:text-blue-600 transition-colors"
             >
+              <i class="fas fa-user-circle text-xl"></i>
+              <span class="hidden md:inline ml-1">Login</span>
+            </a>
             {% endif %}
+
+            <!-- Wishlist -->
+           <a href="{% url 'wishlist:wishlist-detail-page' %}" class="text-gray-700 hover:text-red-500 transition-colors relative">
+    <i class="fas fa-heart text-xl"></i>
+    <span id="wishlist-count" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
+</a>
+
+            <!-- Cart Icon -->
+            <a href="{% url 'cart:cart-detail-page' %}" class="text-gray-700 hover:text-green-600 transition-colors relative">
+    <i class="fas fa-shopping-cart text-xl"></i>
+    <span id="cart-count" class="absolute -top-2 -right-2 bg-green-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>
+</a>
           </div>
         </div>
-      </div>
-    </nav>
 
-    <!-- Messages -->
+        <!-- Secondary Navigation -->
+        <nav class="border-t border-gray-200 py-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-8">
+              <a
+                href="{% url 'products:product_list' %}"
+                class="text-gray-700 hover:text-blue-600 font-medium transition-colors"
+              >
+                All Products
+              </a>
+              <div class="relative group">
+                <button
+                  class="text-gray-700 hover:text-blue-600 font-medium transition-colors flex items-center"
+                >
+                  Categories <i class="fas fa-chevron-down ml-1 text-xs"></i>
+                </button>
+                <div
+                  class="absolute left-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-2 hidden group-hover:block z-50"
+                >
+                  <!-- Categories will be loaded dynamically -->
+                  <div id="categories-dropdown">
+                    <a
+                      href="{% url 'products:product_list' %}"
+                      class="block px-4 py-2 text-gray-700 hover:bg-gray-100"
+                    >
+                      All Categories
+                    </a>
+                  </div>
+                </div>
+              </div>
+              <a
+                href="{% url 'home:home' %}#featured"
+                class="text-gray-700 hover:text-blue-600 font-medium transition-colors"
+              >
+                Featured
+              </a>
+              <a
+                href="{% url 'home:home' %}#deals"
+                class="text-gray-700 hover:text-blue-600 font-medium transition-colors"
+              >
+                Today's Deals
+              </a>
+            </div>
+            <div class="flex items-center space-x-4 text-sm text-gray-600">
+              <span
+                ><i class="fas fa-truck mr-1"></i> Free Shipping over $50</span
+              >
+              <span><i class="fas fa-shield-alt mr-1"></i> Secure Payment</span>
+            </div>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>{% block content %} {% endblock %}</main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white mt-16">
+      <div class="container mx-auto px-4 py-12">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <!-- Company Info -->
+          <div>
+            <h3 class="text-lg font-bold mb-4">HagerBet</h3>
+            <p class="text-gray-300 mb-4">
+              Premium e-commerce platform offering the best products with
+              exceptional service.
+            </p>
+            <div class="flex space-x-4">
+              <a href="#" class="text-gray-300 hover:text-white"
+                ><i class="fab fa-facebook text-xl"></i
+              ></a>
+              <a href="#" class="text-gray-300 hover:text-white"
+                ><i class="fab fa-twitter text-xl"></i
+              ></a>
+              <a href="#" class="text-gray-300 hover:text-white"
+                ><i class="fab fa-instagram text-xl"></i
+              ></a>
+            </div>
+          </div>
+
+          <!-- Quick Links -->
+          <div>
+            <h3 class="text-lg font-bold mb-4">Quick Links</h3>
+            <ul class="space-y-2">
+              <li>
+                <a
+                  href="{% url 'home:home' %}"
+                  class="text-gray-300 hover:text-white"
+                  >Home</a
+                >
+              </li>
+              <li>
+                <a
+                  href="{% url 'products:product_list' %}"
+                  class="text-gray-300 hover:text-white"
+                  >Shop</a
+                >
+              </li>
+              <li>
+                <a
+                  href="{% url 'home:home' %}#about"
+                  class="text-gray-300 hover:text-white"
+                  >About Us</a
+                >
+              </li>
+              <li>
+                <a
+                  href="{% url 'home:home' %}#contact"
+                  class="text-gray-300 hover:text-white"
+                  >Contact</a
+                >
+              </li>
+            </ul>
+          </div>
+
+          <!-- Customer Service -->
+          <div>
+            <h3 class="text-lg font-bold mb-4">Customer Service</h3>
+            <ul class="space-y-2">
+              <li>
+                <a
+                  href="{% url 'home:home' %}#faq"
+                  class="text-gray-300 hover:text-white"
+                  >FAQ</a
+                >
+              </li>
+              <li>
+                <a href="#" class="text-gray-300 hover:text-white"
+                  >Shipping Info</a
+                >
+              </li>
+              <li>
+                <a href="#" class="text-gray-300 hover:text-white">Returns</a>
+              </li>
+              <li>
+                <a href="#" class="text-gray-300 hover:text-white"
+                  >Privacy Policy</a
+                >
+              </li>
+            </ul>
+          </div>
+
+          <!-- Newsletter -->
+          <div>
+            <h3 class="text-lg font-bold mb-4">Newsletter</h3>
+            <p class="text-gray-300 mb-4">
+              Subscribe for updates and exclusive deals
+            </p>
+            <form id="newsletter-form" class="flex">
+              <input
+                type="email"
+                placeholder="Your email"
+                class="flex-1 px-3 py-2 rounded-l text-gray-800"
+                required
+              />
+              <button
+                type="submit"
+                class="bg-blue-600 px-4 py-2 rounded-r hover:bg-blue-700 transition-colors"
+              >
+                <i class="fas fa-paper-plane"></i>
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <div
+          class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-300"
+        >
+          <p>&copy; 2024 HagerBet E-Commerce. All rights reserved.</p>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Messages Container -->
     <div
       id="messages-container"
       class="fixed top-20 right-4 z-50 space-y-2 max-w-sm"
     ></div>
 
-    <!-- Main Content -->
-    <main class="min-h-screen">{% block content %} {% endblock %}</main>
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.5.0/axios.min.js"></script>
+    <script>
+      // Initialize cart and wishlist counts
+      document.addEventListener("DOMContentLoaded", function () {
+        loadCartCount();
+        loadWishlistCount();
+        loadCategoriesDropdown();
+      });
 
-    <!-- Footer -->
-    <footer class="bg-gray-800 text-white py-8">
-      <div class="max-w-7xl mx-auto px-4 text-center">
-        <p>&copy; 2024 HagerBet E-Commerce. All rights reserved.</p>
-      </div>
-    </footer>
+      async function loadCartCount() {
+        try {
+          const response = await fetch("/api/cart/");
+          if (response.ok) {
+            const data = await response.json();
+            const cartCount = document.getElementById("cart-count");
+            if (cartCount) {
+              cartCount.textContent = data.total_items || 0;
+              cartCount.classList.remove("hidden");
+            }
+          }
+        } catch (error) {
+          console.error("Failed to load cart count:", error);
+        }
+      }
 
-    <!-- JavaScript -->
-    <script
-      src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
-      defer
-    ></script>
-    <script src="{% static 'js/base.js' %}"></script>
-    <script src="{% static 'js/ajax-utils.js' %}"></script>
+      async function loadWishlistCount() {
+        try {
+          const response = await fetch("/api/wishlist/");
+          if (response.ok) {
+            const data = await response.json();
+            const wishlistCount = document.getElementById("wishlist-count");
+            if (wishlistCount && data.item_count > 0) {
+              wishlistCount.textContent = data.item_count;
+              wishlistCount.classList.remove("hidden");
+            }
+          }
+        } catch (error) {
+          console.error("Failed to load wishlist count:", error);
+        }
+      }
 
-    {% block extra_js %} {% endblock %}
+      async function loadCategoriesDropdown() {
+        try {
+          const response = await fetch("/api/home/categories/");
+          if (response.ok) {
+            const data = await response.json();
+            const dropdown = document.getElementById("categories-dropdown");
+            if (dropdown && data.categories) {
+              data.categories.slice(0, 6).forEach((category) => {
+                const link = document.createElement("a");
+                link.href = `/products/?category=${category.id}`;
+                link.className =
+                  "block px-4 py-2 text-gray-700 hover:bg-gray-100";
+                link.textContent = category.name;
+                dropdown.appendChild(link);
+              });
+            }
+          }
+        } catch (error) {
+          console.error("Failed to load categories:", error);
+        }
+      }
+    </script>
+    <script src="{% static 'js/navigation.js' %}"></script>
+
+    {% block extra_js %}{% endblock %}
   </body>
 </html>
