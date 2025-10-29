@@ -287,51 +287,51 @@
 
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.5.0/axios.min.js"></script>
-    <script>
-      // Initialize cart and wishlist counts
-      document.addEventListener("DOMContentLoaded", function () {
+    <!-- In base.html - FIX THE SYNTAX ERROR -->
+<script>
+    // Initialize cart and wishlist counts
+    document.addEventListener("DOMContentLoaded", function () {
         loadCartCount();
         loadWishlistCount();
         loadCategoriesDropdown();
-      });
+    });
 
-      async function loadCartCount() {
+    async function loadCartCount() {
         try {
-          const response = await fetch("/api/cart/");
-          if (response.ok) {
-            const data = await response.json();
-            const cartCount = document.getElementById("cart-count");
-            if (cartCount) {
-              cartCount.textContent = data.total_items || 0;
-              cartCount.classList.remove("hidden");
+            const response = await fetch("/api/cart/");
+            if (response.ok) {
+                const data = await response.json();
+                const cartCount = document.getElementById("cart-count");
+                if (cartCount) {
+                    cartCount.textContent = data.total_items || 0;
+                    cartCount.classList.remove("hidden");
+                }
             }
-          }
         } catch (error) {
-          console.error("Failed to load cart count:", error);
+            console.error("Failed to load cart count:", error);
         }
-      }
+    }
 
-      async function loadWishlistCount() {
+    async function loadWishlistCount() {
         try {
-          const response = await fetch("/api/wishlist/");
-          if (response.ok) {
-            const data = await response.json();
-            const wishlistCount = document.getElementById("wishlist-count");
-            if (wishlistCount && data.item_count > 0) {
-              wishlistCount.textContent = data.item_count;
-              wishlistCount.classList.remove("hidden");
+            const response = await fetch("/api/wishlist/");
+            if (response.ok) {
+                const data = await response.json();
+                const wishlistCount = document.getElementById("wishlist-count");
+                if (wishlistCount && data.item_count > 0) {
+                    wishlistCount.textContent = data.item_count;
+                    wishlistCount.classList.remove("hidden");
+                }
             }
-          }
         } catch (error) {
-          console.error("Failed to load wishlist count:", error);
+            console.error("Failed to load wishlist count:", error);
         }
-      }
+    }
 
-      // In base.html - FIX THE CATEGORIES API CALL
-// FIX THE CATEGORIES DROPDOWN FUNCTION
+   // In base.html - UPDATE THESE API CALLS
 async function loadCategoriesDropdown() {
     try {
-        // ✅ CORRECT ENDPOINT - use the one that exists
+        // ✅ CORRECT ENDPOINT: /api/home/categories/
         const response = await fetch("/api/home/categories/"); 
         if (response.ok) {
             const data = await response.json();
@@ -372,12 +372,14 @@ async function loadCategoriesDropdown() {
             });
         }
     }
-} catch (error) {
-        console.error("Failed to load categories:", error);
-    }
-
-    </script>
-    <script src="{% static 'js/navigation.js' %}"></script>
+}
+</script>
+   
+    <script src="{% static 'js/ajax-utils.js' %}"></script>
+    <script src="{% static 'js/toast.js' %}"></script> <!-- Add this line -->
+    <script src="{% static 'js/cart.js' %}"></script>
+    <script src="{% static 'js/wishlist.js' %}"></script>
+    <script src="{% static 'js/products.js' %}"></script>
 
     {% block extra_js %}{% endblock %}
   </body>

@@ -1,3 +1,4 @@
+# wishlist/urls.py - COMPLETE VERSION
 from django.urls import path
 from . import views
 
@@ -12,13 +13,15 @@ urlpatterns = [
     # API Endpoints
     path('api/', views.WishlistDetailView.as_view(), name='wishlist-detail'),
     path('api/items/', views.WishlistItemListView.as_view(), name='wishlist-items'),
-    path('api/items/<uuid:pk>/', views.WishlistItemDetailView.as_view(),
+    path('api/items/<int:pk>/', views.WishlistItemDetailView.as_view(),
          name='wishlist-item-detail'),
-    path('api/add/<uuid:product_id>/',
+
+    # ✅ ADD THESE MISSING ENDPOINTS:
+    path('api/add/<int:product_id>/',
          views.AddToWishlistView.as_view(), name='add-to-wishlist'),
-    path('api/remove/<uuid:product_id>/',
+    path('api/remove/<int:product_id>/',
          views.RemoveFromWishlistView.as_view(), name='remove-from-wishlist'),
-    path('api/check/<uuid:product_id>/',
+    path('api/check/<int:product_id>/',
          views.CheckProductInWishlistView.as_view(), name='check-in-wishlist'),
     path('api/move-to-cart/', views.MoveToCartView.as_view(), name='move-to-cart'),
     path('api/share/', views.WishlistShareView.as_view(), name='wishlist-share'),

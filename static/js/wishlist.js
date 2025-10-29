@@ -25,47 +25,57 @@ class WishlistManager {
                 this.moveToCart(e.target.closest('button'));
             }
         });
-
-        // Bulk actions
-        document.addEventListener('click', (e) => {
-            if (e.target.id === 'move-selected-to-cart') {
-                this.moveSelectedToCart();
-            }
-            if (e.target.id === 'remove-selected-from-wishlist') {
-                this.removeSelectedFromWishlist();
-            }
-        });
     }
 
     async toggleWishlistItem(button) {
         const productId = button.dataset.productId;
         const isInWishlist = button.classList.contains('in-wishlist');
 
-        ajaxUtils.showLoading(button, isInWishlist ? 'Removing...' : 'Adding...');
-
-        const url = isInWishlist ? 
-            `/api/wishlist/remove/${productId}/` : 
-            `/api/wishlist/add/${productId}/`;
-
-        const method = isInWishlist ? 'DELETE' : 'POST';
-
-        const response = await ajaxUtils.makeRequest(url, method);
-
-        if (response.success) {
-            if (isInWishlist) {
-                ajaxUtils.showMessage('Removed from wishlist');
-                this.updateWishlistButton(button, false);
-            } else {
-                ajaxUtils.showMessage('Added to wishlist!');
-                this.updateWishlistButton(button, true);
-            }
-            
-            this.loadWishlistCount();
-        } else {
-            ajaxUtils.showMessage('Operation failed', 'error');
+        if (window.ajaxUtils) {
+            window.ajaxUtils.showLoading(button, isInWishlist ? 'Removing...' : 'Adding...');
         }
 
-        ajaxUtils.hideLoading(button);
+        try {
+            const url = isInWishlist ? 
+                `/api/wishlist/remove/${productId}/` : 
+                `/api/wishlist/add/${productId}/`;
+
+            const method = isInWishlist ? 'DELETE' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCSRFToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const message = isInWishlist ? 'Removed from wishlist' : 'Added to wishlist!';
+                
+                if (window.showToast) {
+                    window.showToast(message, 'success');
+                }
+                this.updateWishlistButton(button, !isInWishlist);
+                this.loadWishlistCount();
+            } else {
+                const errorData = await response.json();
+                if (window.showToast) {
+                    window.showToast(errorData.message || 'Operation failed', 'error');
+                }
+            }
+        } catch (error) {
+            console.error('Wishlist toggle error:', error);
+            if (window.showToast) {
+                window.showToast('Network error. Please try again.', 'error');
+            }
+        } finally {
+            if (window.ajaxUtils) {
+                window.ajaxUtils.hideLoading(button);
+            }
+        }
     }
 
     updateWishlistButton(button, isInWishlist) {
@@ -89,127 +99,58 @@ class WishlistManager {
             return;
         }
 
-        const response = await ajaxUtils.makeRequest(`/api/wishlist/remove/${productId}/`, 'DELETE');
-
-        if (response.success) {
-            ajaxUtils.showMessage('Item removed from wishlist');
-            this.loadWishlistCount();
-            
-            // Remove from DOM
-            const itemElement = button.closest('.wishlist-item');
-            if (itemElement) {
-                itemElement.remove();
-                this.updateWishlistEmptyState();
-            }
-        } else {
-            ajaxUtils.showMessage('Failed to remove item', 'error');
-        }
-    }
-
-    async moveToCart(button) {
-        const productId = button.dataset.productId;
-
-        ajaxUtils.showLoading(button, 'Moving...');
-
-        const response = await ajaxUtils.makeRequest('/api/wishlist/move-to-cart/', 'POST', {
-            item_ids: [productId]
-        });
-
-        if (response.success) {
-            ajaxUtils.showMessage('Item moved to cart!');
-            
-            // Update cart count
-            if (typeof cartManager !== 'undefined') {
-                cartManager.loadCartCount();
-            }
-            
-            // Remove from wishlist
-            const itemElement = button.closest('.wishlist-item');
-            if (itemElement) {
-                itemElement.remove();
-                this.updateWishlistEmptyState();
-            }
-            
-            this.loadWishlistCount();
-        } else {
-            ajaxUtils.showMessage('Failed to move item to cart', 'error');
-        }
-
-        ajaxUtils.hideLoading(button);
-    }
-
-    async moveSelectedToCart() {
-        const selectedItems = this.getSelectedItems();
-        
-        if (selectedItems.length === 0) {
-            ajaxUtils.showMessage('Please select items to move to cart', 'warning');
-            return;
-        }
-
-        const response = await ajaxUtils.makeRequest('/api/wishlist/move-to-cart/', 'POST', {
-            item_ids: selectedItems
-        });
-
-        if (response.success) {
-            ajaxUtils.showMessage(`Moved ${response.data.moved_items.length} items to cart`);
-            
-            // Update counts
-            if (typeof cartManager !== 'undefined') {
-                cartManager.loadCartCount();
-            }
-            
-            // Remove moved items from DOM
-            selectedItems.forEach(itemId => {
-                const itemElement = document.querySelector(`[data-item-id="${itemId}"]`);
-                if (itemElement) {
-                    itemElement.closest('.wishlist-item').remove();
+        try {
+            const response = await fetch(`/api/wishlist/remove/${productId}/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': this.getCSRFToken()
                 }
             });
-            
-            this.updateWishlistEmptyState();
-            this.loadWishlistCount();
-        } else {
-            ajaxUtils.showMessage('Failed to move items to cart', 'error');
-        }
-    }
 
-    async removeSelectedFromWishlist() {
-        const selectedItems = this.getSelectedItems();
-        
-        if (selectedItems.length === 0) {
-            ajaxUtils.showMessage('Please select items to remove', 'warning');
-            return;
-        }
-
-        if (!confirm(`Are you sure you want to remove ${selectedItems.length} items from your wishlist?`)) {
-            return;
-        }
-
-        // Remove each item individually
-        let removedCount = 0;
-        for (const itemId of selectedItems) {
-            const response = await ajaxUtils.makeRequest(`/api/wishlist/remove/${itemId}/`, 'DELETE');
-            if (response.success) {
-                removedCount++;
+            if (response.ok) {
+                if (window.showToast) {
+                    window.showToast('Item removed from wishlist', 'success');
+                }
+                this.loadWishlistCount();
                 
                 // Remove from DOM
-                const itemElement = document.querySelector(`[data-item-id="${itemId}"]`);
+                const itemElement = button.closest('.wishlist-item');
                 if (itemElement) {
-                    itemElement.closest('.wishlist-item').remove();
+                    itemElement.remove();
+                    this.updateWishlistEmptyState();
+                }
+            } else {
+                if (window.showToast) {
+                    window.showToast('Failed to remove item', 'error');
                 }
             }
-        }
-
-        if (removedCount > 0) {
-            ajaxUtils.showMessage(`Removed ${removedCount} items from wishlist`);
-            this.updateWishlistEmptyState();
-            this.loadWishlistCount();
+        } catch (error) {
+            console.error('Remove from wishlist error:', error);
         }
     }
 
-    getSelectedItems() {
-        const checkboxes = document.querySelectorAll('.wishlist-item-checkbox:checked');
-        return Array.from(checkboxes).map(checkbox => checkbox.value);
+    async loadWishlistCount() {
+        try {
+            const response = await fetch('/api/wishlist/');
+            if (response.ok) {
+                const data = await response.json();
+                const count = data.item_count || 0;
+                const counter = document.getElementById('wishlist-count');
+                if (counter) {
+                    counter.textContent = count;
+                    if (count > 0) {
+                        counter.classList.remove('hidden');
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load wishlist count:', error);
+        }
+    }
+
+    getCSRFToken() {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        return csrfToken ? csrfToken.value : '';
     }
 
     updateWishlistEmptyState() {
@@ -225,51 +166,9 @@ class WishlistManager {
             }
         }
     }
-
-    async loadWishlistCount() {
-        const response = await ajaxUtils.makeRequest('/api/wishlist/');
-        
-        if (response.success) {
-            const count = response.data.item_count || 0;
-            ajaxUtils.updateCounter('wishlist-count', count);
-        }
-    }
-
-    async checkWishlistStatus(productId) {
-        const response = await ajaxUtils.makeRequest(`/api/wishlist/check/${productId}/`);
-        
-        if (response.success) {
-            const buttons = document.querySelectorAll(`[data-product-id="${productId}"]`);
-            buttons.forEach(button => {
-                this.updateWishlistButton(button, response.data.is_in_wishlist);
-            });
-        }
-    }
-
-    // Share wishlist functionality
-    async shareWishlist() {
-        const response = await ajaxUtils.makeRequest('/api/wishlist/share/', 'POST', {
-            message: 'Check out my wishlist!'
-        });
-
-        if (response.success) {
-            const shareUrl = response.data.share_url;
-            
-            // Copy to clipboard
-            try {
-                await navigator.clipboard.writeText(shareUrl);
-                ajaxUtils.showMessage('Wishlist share link copied to clipboard!');
-            } catch (err) {
-                // Fallback: show share URL
-                prompt('Share this link:', shareUrl);
-            }
-        } else {
-            ajaxUtils.showMessage('Failed to share wishlist', 'error');
-        }
-    }
 }
 
 // Initialize wishlist manager
 document.addEventListener('DOMContentLoaded', function() {
-    new WishlistManager();
+    window.wishlistManager = new WishlistManager();
 });

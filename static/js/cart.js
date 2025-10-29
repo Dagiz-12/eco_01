@@ -29,28 +29,55 @@ class CartManager {
 
     async addToCart(button) {
         const productId = button.dataset.productId;
-        const variantId = button.dataset.variantId;
-        const quantity = button.dataset.quantity || 1;
+        const quantity = 1;
 
-        ajaxUtils.showLoading(button, 'Adding...');
-
-        const response = await ajaxUtils.makeRequest('/api/cart/add/', 'POST', {
-            product_id: productId,
-            variant_id: variantId,
-            quantity: parseInt(quantity)
-        });
-
-        if (response.success) {
-            ajaxUtils.showMessage('Product added to cart!');
-            this.loadCartCount();
-            
-            // Update cart sidebar if open
-            this.updateCartSidebar(response.data);
-        } else {
-            ajaxUtils.showMessage('Failed to add product to cart', 'error');
+        if (window.ajaxUtils) {
+            window.ajaxUtils.showLoading(button, 'Adding...');
         }
 
-        ajaxUtils.hideLoading(button);
+        try {
+            // ✅ CORRECT URL: /api/cart/items/add/ (not /api/cart/add/)
+            const response = await fetch('/api/cart/items/add/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCSRFToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    product_id: parseInt(productId),
+                    quantity: quantity
+                })
+            });
+
+            // Check if response is OK
+            if (response.ok) {
+                const data = await response.json();
+                
+                if (window.showToast) {
+                    window.showToast('Product added to cart!', 'success');
+                }
+                this.loadCartCount();
+                
+                // Update button state
+                this.updateCartButtonState(button, true);
+            } else {
+                // Handle non-OK responses
+                const errorData = await response.json();
+                if (window.showToast) {
+                    window.showToast(errorData.message || 'Failed to add product to cart', 'error');
+                }
+            }
+        } catch (error) {
+            console.error('Add to cart error:', error);
+            if (window.showToast) {
+                window.showToast('Network error. Please try again.', 'error');
+            }
+        } finally {
+            if (window.ajaxUtils) {
+                window.ajaxUtils.hideLoading(button);
+            }
+        }
     }
 
     async updateCartItem(input) {
@@ -62,17 +89,32 @@ class CartManager {
             return;
         }
 
-        const response = await ajaxUtils.makeRequest(`/api/cart/items/${itemId}/`, 'PATCH', {
-            quantity: quantity
-        });
+        try {
+            // ✅ CORRECT URL: /api/cart/items/{item_id}/update/
+            const response = await fetch(`/api/cart/items/${itemId}/update/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCSRFToken()
+                },
+                body: JSON.stringify({ quantity: quantity })
+            });
 
-        if (response.success) {
-            this.updateCartTotals(response.data);
-            ajaxUtils.showMessage('Cart updated!');
-        } else {
-            ajaxUtils.showMessage('Failed to update cart', 'error');
-            // Revert input value
-            input.value = input.dataset.originalValue;
+            if (response.ok) {
+                const data = await response.json();
+                this.updateCartTotals(data);
+                if (window.showToast) {
+                    window.showToast('Cart updated!', 'success');
+                }
+            } else {
+                if (window.showToast) {
+                    window.showToast('Failed to update cart', 'error');
+                }
+                // Revert input value
+                input.value = input.dataset.originalValue;
+            }
+        } catch (error) {
+            console.error('Update cart item error:', error);
         }
     }
 
@@ -83,29 +125,56 @@ class CartManager {
             return;
         }
 
-        const response = await ajaxUtils.makeRequest(`/api/cart/items/${itemId}/`, 'DELETE');
+        try {
+            // ✅ CORRECT URL: /api/cart/items/{item_id}/remove/
+            const response = await fetch(`/api/cart/items/${itemId}/remove/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': this.getCSRFToken()
+                }
+            });
 
-        if (response.success) {
-            ajaxUtils.showMessage('Item removed from cart');
-            this.loadCartCount();
-            
-            // Remove item from DOM
-            const itemElement = button.closest('.cart-item');
-            if (itemElement) {
-                itemElement.remove();
-                this.updateCartTotals(response.data);
+            if (response.ok) {
+                if (window.showToast) {
+                    window.showToast('Item removed from cart', 'success');
+                }
+                this.loadCartCount();
+                
+                // Remove item from DOM
+                const itemElement = button.closest('.cart-item');
+                if (itemElement) {
+                    itemElement.remove();
+                    // Update totals if needed
+                    const cartResponse = await fetch('/api/cart/');
+                    if (cartResponse.ok) {
+                        const cartData = await cartResponse.json();
+                        this.updateCartTotals(cartData);
+                    }
+                }
+            } else {
+                if (window.showToast) {
+                    window.showToast('Failed to remove item', 'error');
+                }
             }
-        } else {
-            ajaxUtils.showMessage('Failed to remove item', 'error');
+        } catch (error) {
+            console.error('Remove from cart error:', error);
         }
     }
 
     async loadCartCount() {
-        const response = await ajaxUtils.makeRequest('/api/cart/');
-        
-        if (response.success) {
-            const count = response.data.total_items || 0;
-            ajaxUtils.updateCounter('cart-count', count);
+        try {
+            const response = await fetch('/api/cart/');
+            if (response.ok) {
+                const data = await response.json();
+                const count = data.total_items || 0;
+                const counter = document.getElementById('cart-count');
+                if (counter) {
+                    counter.textContent = count;
+                    counter.classList.remove('hidden');
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load cart count:', error);
         }
     }
 
@@ -126,49 +195,27 @@ class CartManager {
         }
     }
 
-    updateCartSidebar(cartData) {
-        const sidebar = document.getElementById('cart-sidebar');
-        if (sidebar && sidebar.classList.contains('active')) {
-            // Refresh cart sidebar content
-            this.refreshCartSidebar();
+    updateCartButtonState(button, isInCart) {
+        if (isInCart) {
+            button.innerHTML = '<i class="fas fa-check mr-2"></i>In Cart';
+            button.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+            button.classList.add('bg-green-600', 'hover:bg-green-700');
+            button.disabled = true;
+        } else {
+            button.innerHTML = '<i class="fas fa-shopping-cart mr-2"></i>Add to Cart';
+            button.classList.remove('bg-green-600', 'hover:bg-green-700');
+            button.classList.add('bg-blue-600', 'hover:bg-blue-700');
+            button.disabled = false;
         }
     }
 
-    async refreshCartSidebar() {
-        const response = await ajaxUtils.makeRequest('/api/cart/');
-        
-        if (response.success) {
-            const sidebar = document.getElementById('cart-sidebar-content');
-            if (sidebar) {
-                // This would typically render a template
-                sidebar.innerHTML = this.renderCartItems(response.data.items);
-            }
-        }
-    }
-
-    renderCartItems(items) {
-        if (!items || items.length === 0) {
-            return '<p class="text-gray-500">Your cart is empty</p>';
-        }
-
-        return items.map(item => `
-            <div class="cart-sidebar-item flex items-center space-x-3 py-3 border-b">
-                <img src="${item.product.image}" alt="${item.product.name}" 
-                     class="w-16 h-16 object-cover rounded">
-                <div class="flex-1">
-                    <h4 class="font-semibold text-sm">${item.product.name}</h4>
-                    <p class="text-gray-600 text-sm">$${item.price} x ${item.quantity}</p>
-                </div>
-                <button class="remove-from-cart-btn text-red-500" 
-                        data-item-id="${item.id}">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `).join('');
+    getCSRFToken() {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        return csrfToken ? csrfToken.value : '';
     }
 }
 
 // Initialize cart manager
 document.addEventListener('DOMContentLoaded', function() {
-    new CartManager();
+    window.cartManager = new CartManager();
 });

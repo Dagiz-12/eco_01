@@ -1,3 +1,4 @@
+# cart/urls.py - COMPLETE VERSION
 from django.urls import path
 from . import views
 
@@ -14,6 +15,8 @@ urlpatterns = [
     path('api/clear/', views.CartClearView.as_view(), name='cart-clear'),
     path('api/merge/', views.CartMergeView.as_view(), name='cart-merge'),
     path('api/items/', views.CartItemListView.as_view(), name='cart-item-list'),
+
+    # ✅ ADD THESE MISSING ENDPOINTS:
     path('api/items/add/', views.CartItemAddView.as_view(), name='cart-item-add'),
     path('api/items/<int:item_id>/update/',
          views.CartItemUpdateView.as_view(), name='cart-item-update'),

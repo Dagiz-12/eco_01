@@ -1,5 +1,5 @@
+# home/views.py - CORRECTED VERSION
 from django.shortcuts import render
-from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.views.generic import TemplateView
 from django.views.decorators.csrf import csrf_exempt
@@ -9,107 +9,173 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from django.db.models import Count, Sum
+
 from .models import HomePageContent, NewsletterSubscriber, ContactMessage, FAQ, SiteConfiguration
 from .serializers import NewsletterSubscribeSerializer, ContactMessageSerializer
 from products.models import Product, Category
 from orders.models import Order
-from django.db.models import Count, Sum
-from django.utils import timezone
-from datetime import timedelta
+
+# HTML VIEWS (Function-based)
 
 
-class HomeView(TemplateView):
-    template_name = 'home/home.html'
+def home(request):
+    """Home page view"""
+    # Get site configuration
+    try:
+        site_config = SiteConfiguration.objects.first()
+    except SiteConfiguration.DoesNotExist:
+        site_config = None
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+    # Get home page content
+    home_content = {
+        section.section: section for section in HomePageContent.objects.filter(is_active=True)
+    }
 
-        # Get site configuration
-        try:
-            context['site_config'] = SiteConfiguration.objects.first()
-        except SiteConfiguration.DoesNotExist:
-            context['site_config'] = None
+    # Get featured products
+    featured_products = Product.objects.filter(
+        is_featured=True,
+        status='published'
+    )[:8]
 
-        # Get home page content
-        context['home_content'] = {
-            section.section: section for section in HomePageContent.objects.filter(is_active=True)
-        }
+    # Get categories with product counts
+    categories = Category.objects.filter(
+        is_active=True
+    ).annotate(
+        product_count=Count('products')
+    ).filter(
+        product_count__gt=0
+    )[:8]
 
-        # ✅ FIXED: Use available fields from Product model
-        context['featured_products'] = Product.objects.filter(
-            is_featured=True,
-            status='published'  # Use 'status' field instead of non-existent 'is_active'
-        )[:8]
+    context = {
+        'site_config': site_config,
+        'home_content': home_content,
+        'featured_products': featured_products,
+        'categories': categories,
+    }
+    return render(request, 'home/home.html', context)
 
-        # Get categories with product counts
-        context['categories'] = Category.objects.filter(
-            is_active=True
-        ).annotate(
+
+def about(request):
+    return render(request, 'home/about.html')
+
+
+def contact(request):
+    return render(request, 'home/contact.html')
+
+
+def faq(request):
+    return render(request, 'home/faq.html')
+
+
+def privacy(request):
+    return render(request, 'home/privacy.html')
+
+
+def terms(request):
+    return render(request, 'home/terms.html')
+
+
+def shipping(request):
+    return render(request, 'home/shipping.html')
+
+
+def returns(request):
+    return render(request, 'home/returns.html')
+
+# API VIEWS
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def categories_api(request):
+    """API endpoint for categories"""
+    try:
+        categories = Category.objects.filter(parent__isnull=True).annotate(
             product_count=Count('products')
-        ).filter(
-            product_count__gt=0
-        )[:8]
+        )[:6]
 
-        return context
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class NewsletterSubscribeView(generics.CreateAPIView):
-    permission_classes = [AllowAny]
-    serializer_class = NewsletterSubscribeSerializer
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            email = serializer.validated_data['email']
-
-            # Check if already subscribed
-            subscriber, created = NewsletterSubscriber.objects.get_or_create(
-                email=email,
-                defaults={
-                    'user': request.user if request.user.is_authenticated else None}
-            )
-
-            if not created and not subscriber.is_active:
-                subscriber.is_active = True
-                subscriber.unsubscribed_at = None
-                subscriber.user = request.user if request.user.is_authenticated else None
-                subscriber.save()
-
-            return Response({
-                'success': True,
-                'message': 'Thank you for subscribing to our newsletter!',
-                'created': created
-            }, status=status.HTTP_201_CREATED)
+        categories_data = []
+        for category in categories:
+            categories_data.append({
+                'id': category.id,
+                'name': category.name,
+                'slug': category.slug,
+                'image': category.image.url if category.image else None,
+                'product_count': category.product_count
+            })
 
         return Response({
+            'success': True,
+            'categories': categories_data
+        })
+    except Exception as e:
+        return Response({
             'success': False,
-            'errors': serializer.errors
-        }, status=status.HTTP_400_BAD_REQUEST)
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def featured_products_api(request):
+    """API endpoint for featured products"""
+    try:
+        featured_products = Product.objects.filter(
+            is_featured=True,
+            status='published'
+        )[:8]
+
+        products_data = []
+        for product in featured_products:
+            products_data.append({
+                'id': product.id,
+                'name': product.name,
+                'slug': product.slug,
+                'price': str(product.price),
+                'primary_image': product.primary_image.url if product.primary_image else None,
+                'category': product.category.name if product.category else None,
+                'is_featured': product.is_featured,
+                'is_in_stock': product.is_in_stock
+            })
+
+        return Response({
+            'success': True,
+            'products': products_data
+        })
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-def contact_message_view(request):
-    serializer = ContactMessageSerializer(data=request.data)
+def newsletter_subscribe(request):
+    """Newsletter subscription API"""
+    serializer = NewsletterSubscribeSerializer(data=request.data)
     if serializer.is_valid():
-        contact_message = serializer.save()
+        email = serializer.validated_data['email']
 
-        # Get client IP and user agent
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0]
-        else:
-            ip = request.META.get('REMOTE_ADDR')
+        # Check if already subscribed
+        subscriber, created = NewsletterSubscriber.objects.get_or_create(
+            email=email,
+            defaults={
+                'user': request.user if request.user.is_authenticated else None
+            }
+        )
 
-        contact_message.ip_address = ip
-        contact_message.user_agent = request.META.get('HTTP_USER_AGENT', '')
-        contact_message.save()
+        if not created and not subscriber.is_active:
+            subscriber.is_active = True
+            subscriber.unsubscribed_at = None
+            subscriber.user = request.user if request.user.is_authenticated else None
+            subscriber.save()
 
         return Response({
             'success': True,
-            'message': 'Thank you for your message! We will get back to you soon.',
-            'message_id': str(contact_message.id)
+            'message': 'Thank you for subscribing to our newsletter!',
+            'created': created
         }, status=status.HTTP_201_CREATED)
 
     return Response({
@@ -117,124 +183,7 @@ def contact_message_view(request):
         'errors': serializer.errors
     }, status=status.HTTP_400_BAD_REQUEST)
 
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def faq_list_view(request):
-    faqs = FAQ.objects.filter(is_active=True).order_by('category', 'order')
-
-    faq_data = {}
-    for faq in faqs:
-        if faq.category not in faq_data:
-            faq_data[faq.category] = []
-        faq_data[faq.category].append({
-            'id': str(faq.id),
-            'question': faq.question,
-            'answer': faq.answer
-        })
-
-    return Response({
-        'success': True,
-        'faqs': faq_data
-    })
-
-
-# In home/views.py - FIX THE BUG in featured_products_view
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def featured_products_view(request):
-    """API endpoint for featured products"""
-    products = Product.objects.filter(
-        is_featured=True,
-        status='published'
-    ).select_related('category', 'brand')[:12]
-
-    product_data = []
-    for product in products:
-        product_data.append({
-            'id': str(product.id),
-            'name': product.name,
-            'slug': product.slug,
-            'price': str(product.price),
-            'compare_price': str(product.compare_price) if product.compare_price else None,
-            'primary_image': product.primary_image.url if hasattr(product, 'primary_image') and product.primary_image else None,
-            'is_featured': product.is_featured,
-            'is_in_stock': product.is_in_stock,
-            'category': product.category.name if product.category else None,
-            'brand': product.brand.name if product.brand else None,
-        })
-
-    return Response({
-        'success': True,  # ✅ FIXED: Changed from False to True
-        'products': product_data
-    })
-
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def categories_view(request):
-    """API endpoint for categories"""
-    categories = Category.objects.filter(
-        is_active=True,
-        parent__isnull=True  # Only top-level categories
-    ).annotate(
-        product_count=Count('products')
-    ).filter(
-        product_count__gt=0
-    )[:12]
-
-    category_data = []
-    for category in categories:
-        category_data.append({
-            'id': str(category.id),
-            'name': category.name,
-            'slug': category.slug,
-            'image': category.image.url if category.image else None,
-            'product_count': category.product_count,
-            'description': category.description
-        })
-
-    return Response({
-        'success': True,
-        'categories': category_data
-    })
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def dashboard_stats_view(request):
-    """Dashboard statistics for authenticated users"""
-    user = request.user
-
-    # Basic stats
-    total_orders = Order.objects.filter(user=user).count()
-    total_spent = Order.objects.filter(
-        user=user,
-        status__in=['completed', 'delivered']
-    ).aggregate(total=Sum('grand_total'))['total'] or 0
-
-    # Recent orders
-    recent_orders = Order.objects.filter(user=user).order_by('-created_at')[:5]
-
-    order_data = []
-    for order in recent_orders:
-        order_data.append({
-            'order_number': order.order_number,
-            'status': order.status,
-            'grand_total': str(order.grand_total),
-            'created_at': order.created_at.isoformat(),
-            'item_count': order.items.count()
-        })
-
-    return Response({
-        'success': True,
-        'stats': {
-            'total_orders': total_orders,
-            'total_spent': float(total_spent),
-            'member_since': user.date_joined.strftime('%B %Y')
-        },
-        'recent_orders': order_data
-    })
+# Remove duplicate functions - keep only one version of each
 
 
 def handler404(request, exception):
@@ -243,6 +192,3 @@ def handler404(request, exception):
 
 def handler500(request):
     return render(request, 'home/500.html', status=500)
-
-
-# HTML Views
