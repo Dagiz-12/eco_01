@@ -1,97 +1,129 @@
-{% extends 'base.html' %} {% load static %} {% block title %}Login - HagerBet
-<!--ok -->
-{% endblock %} {% block content %}
-<div
-  class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8"
->
-  <div class="max-w-md w-full space-y-8">
-    <div>
-      <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-        Sign in to your account
-      </h2>
+<!-- templates/users/login.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Login - HagerBet{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <div>
+            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                Sign in to your account
+            </h2>
+        </div>
+        <form id="login-form" class="mt-8 space-y-6">
+            {% csrf_token %}
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            
+            <div class="rounded-md shadow-sm -space-y-px">
+                <div>
+                    <label for="email" class="sr-only">Email address</label>
+                    <input id="email" name="email" type="email" autocomplete="email" required
+                        class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                        placeholder="Email address">
+                </div>
+                <div>
+                    <label for="password" class="sr-only">Password</label>
+                    <input id="password" name="password" type="password" autocomplete="current-password" required
+                        class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                        placeholder="Password">
+                </div>
+            </div>
+
+            <div>
+                <button type="submit"
+                    class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Sign in
+                </button>
+            </div>
+        </form>
     </div>
-    <form class="mt-8 space-y-6" method="POST" id="login-form">
-      {% csrf_token %}
-      <div class="rounded-md shadow-sm -space-y-px">
-        <div>
-          <label for="email" class="sr-only">Email address</label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            required
-            class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-            placeholder="Email address"
-          />
-        </div>
-        <div>
-          <label for="password" class="sr-only">Password</label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-            placeholder="Password"
-          />
-        </div>
-      </div>
-
-      <div>
-        <button
-          type="submit"
-          class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          Sign in
-        </button>
-      </div>
-
-      <div class="text-center">
-        <a
-          href="{% url 'users:register' %}"
-          class="text-blue-600 hover:text-blue-500"
-        >
-          Don't have an account? Sign up
-        </a>
-      </div>
-    </form>
-  </div>
 </div>
-{% endblock %} {% block extra_js %}
+{% endblock %}
+
+{% block extra_js %}
 <script>
-  document
-    .getElementById("login-form")
-    .addEventListener("submit", async function (e) {
-      e.preventDefault();
+document.addEventListener('DOMContentLoaded', function() {
+    const loginForm = document.getElementById('login-form');
+    
+    if (loginForm) {
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            const submitButton = this.querySelector('button[type="submit"]');
+            
+            // Show loading state
+            submitButton.disabled = true;
+            submitButton.textContent = 'Signing in...';
+            
+            try {
+                console.log('Sending login request...');
+                
+                const response = await fetch('/api/users/api/login/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',  // ✅ CRITICAL: Must be application/json
+                        'X-CSRFToken': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                });
 
-      const formData = new FormData(this);
-      const data = {
-        email: formData.get("email"),
-        password: formData.get("password"),
-      };
+                console.log('Response status:', response.status);
+                
+                // Check content type
+                const contentType = response.headers.get('content-type');
+                console.log('Content-Type:', contentType);
+                
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('Non-JSON response received:', text.substring(0, 200));
+                    throw new Error('Server returned HTML instead of JSON');
+                }
 
-      try {
-        const response = await fetch("/api/users/login/", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": "{{ csrf_token }}",
-          },
-          body: JSON.stringify(data),
+                const data = await response.json();
+                console.log('Login response data:', data);
+                
+                if (response.ok) {
+                    if (window.showToast) {
+                        window.showToast('Login successful! Redirecting...', 'success');
+                    } else {
+                        alert('Login successful!');
+                    }
+                    // Redirect after successful login
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1500);
+                } else {
+                    const errorMessage = data.detail || data.error || 'Login failed';
+                    if (window.showToast) {
+                        window.showToast(errorMessage, 'error');
+                    } else {
+                        alert('Login failed: ' + errorMessage);
+                    }
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                const errorMessage = error.message || 'Network error. Please try again.';
+                if (window.showToast) {
+                    window.showToast(errorMessage, 'error');
+                } else {
+                    alert('Login error: ' + errorMessage);
+                }
+            } finally {
+                // Reset button
+                submitButton.disabled = false;
+                submitButton.textContent = 'Sign in';
+            }
         });
-
-        const result = await response.json();
-
-        if (response.ok) {
-          // Store token and redirect
-          localStorage.setItem("token", result.token);
-          window.location.href = "{% url 'home:home' %}";
-        } else {
-          alert(result.error || "Login failed");
-        }
-      } catch (error) {
-        alert("Login error: " + error.message);
-      }
-    });
+    }
+});
 </script>
 {% endblock %}

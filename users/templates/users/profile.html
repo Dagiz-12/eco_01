@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Profile - HagerBet{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-gray-800 mb-8">My Profile</h1>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Profile Information -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">Profile Information</h2>
+                <div id="profile-info">
+                    <!-- Profile data will be loaded dynamically -->
+                    <div class="text-center py-8">
+                        <i class="fas fa-spinner fa-spin text-2xl text-blue-600 mb-2"></i>
+                        <p class="text-gray-600">Loading profile...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Addresses -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">My Addresses</h2>
+                    <button onclick="showAddressForm()" 
+                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-plus mr-2"></i>Add Address
+                    </button>
+                </div>
+                <div id="addresses-list">
+                    <!-- Addresses will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-lg shadow-md p-6 sticky top-4">
+                <h3 class="text-lg font-semibold mb-4">Quick Actions</h3>
+                <div class="space-y-3">
+                    <a href="{% url 'orders:order-list' %}" 
+                       class="block w-full bg-gray-100 text-gray-800 px-4 py-3 rounded-lg hover:bg-gray-200 transition-colors text-center">
+                        <i class="fas fa-shopping-bag mr-2"></i>My Orders
+                    </a>
+                    <a href="{% url 'wishlist:wishlist-detail-page' %}" 
+                       class="block w-full bg-gray-100 text-gray-800 px-4 py-3 rounded-lg hover:bg-gray-200 transition-colors text-center">
+                        <i class="fas fa-heart mr-2"></i>My Wishlist
+                    </a>
+                    <button onclick="changePassword()" 
+                            class="w-full bg-gray-100 text-gray-800 px-4 py-3 rounded-lg hover:bg-gray-200 transition-colors">
+                        <i class="fas fa-lock mr-2"></i>Change Password
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Address Modal -->
+<div id="address-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg p-6 w-full max-w-md">
+        <h3 class="text-xl font-semibold mb-4">Add Address</h3>
+        <form id="address-form">
+            <div class="space-y-4">
+                <select id="address-type" class="w-full px-3 py-2 border rounded-lg">
+                    <option value="shipping">Shipping Address</option>
+                    <option value="billing">Billing Address</option>
+                </select>
+                <input type="text" id="street" placeholder="Street Address" class="w-full px-3 py-2 border rounded-lg">
+                <input type="text" id="city" placeholder="City" class="w-full px-3 py-2 border rounded-lg">
+                <input type="text" id="state" placeholder="State" class="w-full px-3 py-2 border rounded-lg">
+                <input type="text" id="zip-code" placeholder="ZIP Code" class="w-full px-3 py-2 border rounded-lg">
+                <input type="text" id="country" placeholder="Country" class="w-full px-3 py-2 border rounded-lg" value="Ethiopia">
+                <div class="flex items-center">
+                    <input type="checkbox" id="is-default" class="mr-2">
+                    <label for="is-default">Set as default address</label>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-4 mt-6">
+                <button type="button" onclick="hideAddressForm()" class="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Save Address</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/profile.js' %}"></script>
+{% endblock %}

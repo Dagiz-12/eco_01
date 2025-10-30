@@ -135,22 +135,21 @@ class AjaxUtils {
 
     // Load initial counts
     async loadInitialCounts() {
-        try {
-            // Load cart count
-            const cartResponse = await this.makeRequest('/api/cart/');
-            if (cartResponse.success) {
-                this.updateCounter('cart-count', cartResponse.data.total_items || 0);
-            }
-
-            // Load wishlist count
-            const wishlistResponse = await this.makeRequest('/api/wishlist/');
-            if (wishlistResponse.success) {
-                this.updateCounter('wishlist-count', wishlistResponse.data.item_count || 0);
-            }
-        } catch (error) {
-            console.error('Failed to load initial counts:', error);
+    try {
+        // ✅ CORRECT ENDPOINTS
+        const cartResponse = await this.makeRequest('/api/cart/api/detail/');
+        if (cartResponse.success) {
+            this.updateCounter('cart-count', cartResponse.data.total_items || 0);
         }
+
+        const wishlistResponse = await this.makeRequest('/api/wishlist/api/detail/');
+        if (wishlistResponse.success) {
+            this.updateCounter('wishlist-count', wishlistResponse.data.item_count || 0);
+        }
+    } catch (error) {
+        console.error('Failed to load initial counts:', error);
     }
+}
 }
 
 // ✅ SINGLE GLOBAL INSTANCE - Remove duplicates below this line

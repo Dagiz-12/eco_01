@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Checkout - HagerBet{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-gray-800 mb-8">Checkout</h1>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Order Summary -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">Order Summary</h2>
+                <div id="checkout-items">
+                    <!-- Items will be loaded dynamically -->
+                    <div class="text-center py-8">
+                        <i class="fas fa-spinner fa-spin text-2xl text-blue-600 mb-2"></i>
+                        <p class="text-gray-600">Loading order details...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shipping Address Section -->
+<div class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <h2 class="text-xl font-semibold mb-4">Shipping Address</h2>
+    <div id="shipping-addresses" class="mb-4">
+        <!-- Addresses will be loaded here -->
+        <div class="text-center py-4 border-2 border-dashed border-gray-300 rounded-lg">
+            <i class="fas fa-map-marker-alt text-3xl text-gray-400 mb-2"></i>
+            <p class="text-gray-500 mb-2">No shipping addresses found</p>
+            <p class="text-sm text-gray-400">Please add a shipping address to continue</p>
+        </div>
+    </div>
+    <button onclick="showAddressForm('shipping')" 
+            class="w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+        <i class="fas fa-plus mr-2"></i>Add Shipping Address
+    </button>
+</div>
+
+<!-- Billing Address Section -->
+<div class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <h2 class="text-xl font-semibold mb-4">Billing Address</h2>
+    <div id="billing-addresses" class="mb-4">
+        <!-- Addresses will be loaded here -->
+        <div class="text-center py-4 border-2 border-dashed border-gray-300 rounded-lg">
+            <i class="fas fa-receipt text-3xl text-gray-400 mb-2"></i>
+            <p class="text-gray-500 mb-2">No billing addresses found</p>
+            <p class="text-sm text-gray-400">Please add a billing address to continue</p>
+        </div>
+    </div>
+    
+    <!-- Same as shipping address option -->
+    <div class="flex items-center mb-4 p-3 bg-gray-50 rounded-lg">
+        <input type="checkbox" id="same-as-shipping" class="mr-3" onchange="toggleSameAsShipping()">
+        <label for="same-as-shipping" class="text-gray-700 font-medium">Use same as shipping address</label>
+    </div>
+    
+    <button onclick="showAddressForm('billing')" 
+            class="w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+        <i class="fas fa-plus mr-2"></i>Add Billing Address
+    </button>
+</div>
+
+            <!-- Payment Method -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Payment Method</h2>
+                <div id="payment-methods" class="space-y-4">
+                    <!-- Payment options will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Total & Actions -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-lg shadow-md p-6 sticky top-4">
+                <h2 class="text-xl font-semibold mb-4">Order Total</h2>
+                <div class="space-y-2 mb-4">
+                    <div class="flex justify-between">
+                        <span>Subtotal:</span>
+                        <span id="subtotal">$0.00</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Shipping:</span>
+                        <span id="shipping-cost">$0.00</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Tax:</span>
+                        <span id="tax-amount">$0.00</span>
+                    </div>
+                    <div class="flex justify-between font-semibold text-lg border-t pt-2">
+                        <span>Total:</span>
+                        <span id="grand-total">$0.00</span>
+                    </div>
+                </div>
+                
+                <button id="place-order-btn" 
+                        onclick="placeOrder()"
+                        class="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    Place Order
+                </button>
+                
+                <p class="text-xs text-gray-500 mt-4 text-center">
+                    By placing your order, you agree to our Terms of Service and Privacy Policy
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Address Modal -->
+<div id="address-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg p-6 w-full max-w-md">
+        <h3 class="text-xl font-semibold mb-4" id="modal-title">Add Address</h3>
+        <form id="address-form">
+            <input type="hidden" id="address-type">
+            <div class="space-y-4">
+                <input type="text" id="street" placeholder="Street Address" class="w-full px-3 py-2 border rounded-lg">
+                <input type="text" id="city" placeholder="City" class="w-full px-3 py-2 border rounded-lg">
+                <input type="text" id="state" placeholder="State" class="w-full px-3 py-2 border rounded-lg">
+                <input type="text" id="zip-code" placeholder="ZIP Code" class="w-full px-3 py-2 border rounded-lg">
+                <input type="text" id="country" placeholder="Country" class="w-full px-3 py-2 border rounded-lg" value="Ethiopia">
+                <div class="flex items-center">
+                    <input type="checkbox" id="is-default" class="mr-2">
+                    <label for="is-default">Set as default address</label>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-4 mt-6">
+                <button type="button" onclick="hideAddressForm()" class="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Save Address</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/checkout.js' %}"></script>
+{% endblock %}

@@ -1,4 +1,3 @@
-# ecom/urls.py - CORRECTED VERSION
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
@@ -12,7 +11,7 @@ urlpatterns = [
     # Home app - HTML pages
     path('', include('home.urls')),
 
-    # Home API endpoints - ADD THIS
+    # Home API endpoints
     path('api/home/', include([
         path('categories/', views.categories_api, name='categories-api'),
         path('featured-products/', views.featured_products_api,
@@ -25,12 +24,15 @@ urlpatterns = [
     path('api/users/', include('users.urls')),
     path('api/products/', include('products.urls')),
     path('api/cart/', include('cart.urls')),
-    path('api/orders/', include('orders.urls')),
+    path('api/orders/', include('orders.urls')),  # API endpoints
     path('api/payments/', include('payments.urls')),
     path('api/reviews/', include('reviews.urls')),
     path('api/wishlist/', include('wishlist.urls')),
     path('api/notifications/', include('notifications.urls')),
     path('api/coupons/', include('coupons.urls')),
+
+    # HTML routes for orders - SEPARATE FILE
+    path('orders/', include('orders.urls_html')),  # HTML pages
 
     # REST Framework auth URLs
     path('api-auth/', include('rest_framework.urls')),
@@ -46,8 +48,3 @@ if settings.DEBUG:
                           document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL,
                           document_root=settings.STATIC_ROOT)
-
-# Admin site customization
-admin.site.site_header = 'Hagerbet E-Commerce Administration'
-admin.site.site_title = 'Hagerbet Admin'
-admin.site.index_title = 'Welcome to Hagerbet Admin Portal'

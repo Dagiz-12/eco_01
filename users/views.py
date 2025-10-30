@@ -1,3 +1,6 @@
+from .serializers import AddressSerializer
+from .models import Address
+from rest_framework import generics, status
 from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -94,3 +97,19 @@ def register_page(request):
 
 def profile_page(request):
     return render(request, 'users/profile.html')
+
+
+class AddressCreateView(generics.CreateAPIView):
+    serializer_class = AddressSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class AddressListView(generics.ListAPIView):
+    serializer_class = AddressSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Address.objects.filter(user=self.request.user)

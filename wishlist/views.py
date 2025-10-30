@@ -66,25 +66,29 @@ class AddToWishlistView(generics.CreateAPIView):
         ).first()
 
         if existing_item:
-            # Update existing item
-            serializer = self.get_serializer(existing_item, data=request.data)
+            # Product already in wishlist - return success
+            serializer = self.get_serializer(existing_item)
+            return Response(
+                {'message': 'Product already in wishlist', 'data': serializer.data},
+                status=status.HTTP_200_OK
+            )
         else:
-            # Create new item
-            serializer = self.get_serializer(data=request.data)
+            # Create new wishlist item
+            data = {'product': product_id}
+            serializer = self.get_serializer(data=data)
 
-        serializer.is_valid(raise_exception=True)
-
-        if existing_item:
-            serializer.save()
-            message = 'Wishlist item updated'
-        else:
-            serializer.save(wishlist=wishlist, product_id=product_id)
-            message = 'Product added to wishlist'
-
-        return Response(
-            {'message': message, 'data': serializer.data},
-            status=status.HTTP_200_OK
-        )
+            if serializer.is_valid():
+                serializer.save(wishlist=wishlist)
+                return Response(
+                    {'message': 'Product added to wishlist',
+                        'data': serializer.data},
+                    status=status.HTTP_201_CREATED
+                )
+            else:
+                return Response(
+                    serializer.errors,
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
 
 class RemoveFromWishlistView(generics.DestroyAPIView):

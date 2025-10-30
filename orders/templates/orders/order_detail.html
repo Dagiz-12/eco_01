@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Order #{{ order_id }} - HagerBet{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Order Header -->
+        <div class="text-center mb-8">
+            <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-check text-green-600 text-3xl"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Order Confirmed!</h1>
+            <p class="text-gray-600">Thank you for your purchase. Your order has been received.</p>
+            <p class="text-sm text-gray-500 mt-2">Order #<span id="order-number">Loading...</span></p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Order Details -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <h2 class="text-xl font-semibold mb-4">Order Details</h2>
+                    <div id="order-details" class="space-y-4">
+                        <div class="text-center py-8">
+                            <i class="fas fa-spinner fa-spin text-2xl text-blue-600 mb-2"></i>
+                            <p class="text-gray-600">Loading order details...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Items -->
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <h2 class="text-xl font-semibold mb-4">Order Items</h2>
+                    <div id="order-items">
+                        <div class="text-center py-8">
+                            <i class="fas fa-spinner fa-spin text-2xl text-blue-600 mb-2"></i>
+                            <p class="text-gray-600">Loading order items...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shipping & Billing -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h2 class="text-xl font-semibold mb-4">Shipping Address</h2>
+                        <div id="shipping-address">
+                            <div class="text-center py-4">
+                                <i class="fas fa-spinner fa-spin text-blue-600 mb-2"></i>
+                                <p class="text-gray-600">Loading...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h2 class="text-xl font-semibold mb-4">Billing Address</h2>
+                        <div id="billing-address">
+                            <div class="text-center py-4">
+                                <i class="fas fa-spinner fa-spin text-blue-600 mb-2"></i>
+                                <p class="text-gray-600">Loading...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Summary -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-md p-6 sticky top-4">
+                    <h2 class="text-xl font-semibold mb-4">Order Summary</h2>
+                    <div class="space-y-3 mb-6">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Subtotal:</span>
+                            <span id="order-subtotal">$0.00</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Shipping:</span>
+                            <span id="order-shipping">$0.00</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Tax:</span>
+                            <span id="order-tax">$0.00</span>
+                        </div>
+                        <div class="border-t pt-3">
+                            <div class="flex justify-between font-semibold text-lg">
+                                <span>Total:</span>
+                                <span id="order-total">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <a href="{% url 'orders:order-list' %}" 
+                           class="block w-full bg-blue-600 text-white text-center py-3 rounded-lg hover:bg-blue-700 transition-colors">
+                            View All Orders
+                        </a>
+                        <a href="{% url 'products:product_list' %}" 
+                           class="block w-full bg-gray-200 text-gray-800 text-center py-3 rounded-lg hover:bg-gray-300 transition-colors">
+                            Continue Shopping
+                        </a>
+                        <button onclick="window.print()" 
+                                class="w-full bg-white border border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition-colors">
+                            <i class="fas fa-print mr-2"></i>Print Receipt
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/order_detail.js' %}"></script>
+{% endblock %}

@@ -1,3 +1,4 @@
+from django.shortcuts import render
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -36,10 +37,18 @@ class OrderCreateView(APIView):
 
     @transaction.atomic
     def post(self, request):
+        print("=== ORDER CREATION STARTED ===")
+        print(f"User: {request.user.id} - {request.user.email}")
+        print(f"Request data: {request.data}")
+
         # Get user's cart
         cart = CartManager.get_or_create_cart(request)
+        print(f"Cart found: {cart is not None}")
+        if cart:
+            print(f"Cart items count: {cart.items.count()}")
 
-        if cart.items.count() == 0:
+        if not cart or cart.items.count() == 0:
+            print("=== CART IS EMPTY ===")
             return Response(
                 {'error': 'Cart is empty'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -51,6 +60,9 @@ class OrderCreateView(APIView):
         )
 
         if serializer.is_valid():
+            print("=== SERIALIZER VALID ===")
+            print(f"Validated data: {serializer.validated_data}")
+
             try:
                 # Create order
                 order = OrderManager.create_order_from_cart(
@@ -59,6 +71,9 @@ class OrderCreateView(APIView):
                     address_data=serializer.validated_data,
                     payment_method=serializer.validated_data['payment_method']
                 )
+                print(f"=== ORDER CREATED SUCCESSFULLY ===")
+                print(f"Order number: {order.order_number}")
+                print(f"Order ID: {order.id}")
 
                 # Return order details
                 order_serializer = OrderDetailSerializer(order)
@@ -68,12 +83,18 @@ class OrderCreateView(APIView):
                 }, status=status.HTTP_201_CREATED)
 
             except Exception as e:
+                print(f"=== ORDER CREATION ERROR ===")
+                print(f"Error: {str(e)}")
+                import traceback
+                print(f"Traceback: {traceback.format_exc()}")
                 return Response(
                     {'error': str(e)},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            print("=== SERIALIZER INVALID ===")
+            print(f"Errors: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class OrderCancelView(APIView):
@@ -206,4 +227,45 @@ class OrderStatsView(APIView):
             'total_revenue': float(total_revenue),
             'recent_orders_30_days': recent_orders,
             'status_distribution': list(status_distribution)
+        }, status=status.HTTP_200_OK)
+
+
+# Add this function to your views.py
+
+def checkout_page(request):
+    """Render the checkout page"""
+    return render(request, 'orders/checkout.html')
+
+
+def order_detail_page(request, order_id):
+    """Render the order detail page"""
+    try:
+        # Verify the order exists and user has permission
+        order = Order.objects.filter(id=order_id, user=request.user).first()
+        if not order:
+            return render(request, 'orders/order_not_found.html', status=404)
+
+        return render(request, 'orders/order_detail.html', {
+            'order_id': order_id,
+            'order_number': order.order_number,
+        })
+    except Exception as e:
+        print(f"Error loading order detail page: {e}")
+        return render(request, 'orders/order_error.html', status=500)
+
+
+class TestOrderView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        """Simple test endpoint to verify order creation"""
+        print("=== TEST ORDER ENDPOINT HIT ===")
+        print(f"User: {request.user.id} - {request.user.email}")
+        print(f"Request data: {request.data}")
+
+        return Response({
+            'message': 'Test endpoint working',
+            'user': request.user.email,
+            'data_received': request.data,
+            'authenticated': True
         }, status=status.HTTP_200_OK)

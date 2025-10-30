@@ -34,6 +34,8 @@ class Order(models.Model):
         ('paypal', 'PayPal'),
         ('bank_transfer', 'Bank Transfer'),
         ('cash_on_delivery', 'Cash on Delivery'),
+        ('cbe', 'CBE Birr'),  # ADD THIS
+        ('telebirr', 'TeleBirr'),  # ADD THIS
     ]
 
     # Order Identification

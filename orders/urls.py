@@ -10,6 +10,11 @@ router.register('admin/orders', views.OrderAdminViewSet,
                 basename='admin-order')
 
 urlpatterns = [
+    # HTML Pages
+    path('checkout/', views.checkout_page, name='checkout'),  # ADD THIS LINE
+
+    path('<int:order_id>/', views.order_detail_page, name='order-detail'),
+
     # User endpoints
     path('', views.OrderListView.as_view(), name='order-list'),
     path('create/', views.OrderCreateView.as_view(), name='order-create'),
@@ -24,4 +29,6 @@ urlpatterns = [
 
     # Include router URLs
     path('', include(router.urls)),
+
+    path('test-create/', views.TestOrderView.as_view(), name='test-order-create'),
 ]

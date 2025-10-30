@@ -12,6 +12,59 @@
     />
     {% block extra_css %}{% endblock %} {% load static %}
     <!--ok -->
+     <!-- Add this script in base.html before other scripts -->
+<script>
+// Global CSRF token function
+function getCSRFToken() {
+    const name = 'csrftoken';
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Global showToast function
+if (typeof showToast === 'undefined') {
+    function showToast(message, type = 'info') {
+        const container = document.getElementById('messages-container');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = `p-4 rounded-lg shadow-lg ${
+            type === 'success' ? 'bg-green-500 text-white' :
+            type === 'error' ? 'bg-red-500 text-white' :
+            type === 'warning' ? 'bg-yellow-500 text-white' :
+            'bg-blue-500 text-white'
+        }`;
+        toast.textContent = message;
+
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 5000);
+    }
+    window.showToast = showToast;
+}
+
+// Debug function to check CSRF token
+function debugCSRFToken() {
+    const token = getCSRFToken();
+    console.log('CSRF Token:', token ? 'Found' : 'NOT FOUND');
+    console.log('Token value:', token);
+    return token;
+}
+</script>
   </head>
   <body class="bg-gray-50">
     <!-- Header -->
@@ -298,13 +351,14 @@
 
     async function loadCartCount() {
         try {
-            const response = await fetch("/api/cart/");
+            const response = await fetch("/api/cart/api/detail/");
             if (response.ok) {
                 const data = await response.json();
                 const cartCount = document.getElementById("cart-count");
                 if (cartCount) {
-                    cartCount.textContent = data.total_items || 0;
-                    cartCount.classList.remove("hidden");
+                    const totalItems = data.total_items || data.items?.length || 0;
+                cartCount.textContent = totalItems;
+                cartCount.classList.remove("hidden");
                 }
             }
         } catch (error) {
@@ -314,15 +368,20 @@
 
     async function loadWishlistCount() {
         try {
-            const response = await fetch("/api/wishlist/");
-            if (response.ok) {
-                const data = await response.json();
-                const wishlistCount = document.getElementById("wishlist-count");
-                if (wishlistCount && data.item_count > 0) {
-                    wishlistCount.textContent = data.item_count;
+            const response = await fetch("/api/wishlist/api/detail/");
+            {
+            const data = await response.json();
+            const wishlistCount = document.getElementById("wishlist-count");
+            if (wishlistCount) {
+                const itemCount = data.item_count || data.items?.length || 0;
+                if (itemCount > 0) {
+                    wishlistCount.textContent = itemCount;
                     wishlistCount.classList.remove("hidden");
+                } else {
+                    wishlistCount.classList.add("hidden");
                 }
             }
+        }
         } catch (error) {
             console.error("Failed to load wishlist count:", error);
         }
