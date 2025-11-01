@@ -10,15 +10,14 @@ router.register('admin/orders', views.OrderAdminViewSet,
                 basename='admin-order')
 
 urlpatterns = [
-    # HTML Pages
-    path('checkout/', views.checkout_page, name='checkout'),  # ADD THIS LINE
+    # HTML Pages - REMOVE order detail page from here
+    path('checkout/', views.checkout_page, name='checkout'),
 
-    path('<int:order_id>/', views.order_detail_page, name='order-detail'),
-
-    # User endpoints
+    # API Endpoints - KEEP THESE
     path('', views.OrderListView.as_view(), name='order-list'),
     path('create/', views.OrderCreateView.as_view(), name='order-create'),
-    path('<int:pk>/', views.OrderDetailView.as_view(), name='order-detail'),
+    path('<int:pk>/', views.OrderDetailView.as_view(),
+         name='order-detail'),  # API endpoint
     path('<int:order_id>/cancel/',
          views.OrderCancelView.as_view(), name='order-cancel'),
 
@@ -29,6 +28,5 @@ urlpatterns = [
 
     # Include router URLs
     path('', include(router.urls)),
-
     path('test-create/', views.TestOrderView.as_view(), name='test-order-create'),
 ]

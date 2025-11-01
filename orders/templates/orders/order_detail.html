@@ -1,11 +1,14 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Order #{{ order_id }} - HagerBet{% endblock %}
+{% block title %}Order #{{ order.order_number }} - HagerBet{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
     <div class="max-w-4xl mx-auto">
+        <!-- Add hidden element with order ID -->
+        <div id="order-id-data" data-order-id="{{ order.id }}" style="display: none;"></div>
+        
         <!-- Order Header -->
         <div class="text-center mb-8">
             <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -13,9 +16,9 @@
             </div>
             <h1 class="text-3xl font-bold text-gray-800 mb-2">Order Confirmed!</h1>
             <p class="text-gray-600">Thank you for your purchase. Your order has been received.</p>
-            <p class="text-sm text-gray-500 mt-2">Order #<span id="order-number">Loading...</span></p>
+            <p class="text-sm text-gray-500 mt-2">Order #<span id="order-number">{{ order.order_number }}</span></p>
         </div>
-
+        
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- Order Details -->
             <div class="lg:col-span-2">
@@ -89,10 +92,10 @@
                     </div>
 
                     <div class="space-y-3">
-                        <a href="{% url 'orders:order-list' %}" 
-                           class="block w-full bg-blue-600 text-white text-center py-3 rounded-lg hover:bg-blue-700 transition-colors">
-                            View All Orders
-                        </a>
+                        <a href="{% url 'orders_html:order-list-page' %}" 
+   class="block w-full bg-blue-600 text-white text-center py-3 rounded-lg hover:bg-blue-700 transition-colors">
+    View All Orders
+</a>
                         <a href="{% url 'products:product_list' %}" 
                            class="block w-full bg-gray-200 text-gray-800 text-center py-3 rounded-lg hover:bg-gray-300 transition-colors">
                             Continue Shopping
@@ -110,5 +113,10 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+    // Pass order ID to JavaScript
+    const ORDER_ID = {{ order.id }};
+    console.log('Order ID from template:', ORDER_ID);
+</script>
 <script src="{% static 'js/order_detail.js' %}"></script>
 {% endblock %}

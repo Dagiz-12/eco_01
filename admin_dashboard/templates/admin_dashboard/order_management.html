@@ -1,0 +1,306 @@
+{% extends 'admin_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Order Management - HagerBet Admin{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Order Management</h1>
+            <p class="text-gray-600">Process and manage customer orders</p>
+        </div>
+        <div class="flex space-x-3">
+            <div class="relative">
+                <select id="status-filter" class="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">All Statuses</option>
+                    <option value="pending">Pending</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="processing">Processing</option>
+                    <option value="shipped">Shipped</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="cancelled">Cancelled</option>
+                </select>
+            </div>
+            <button onclick="exportOrders()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                <i class="fas fa-download mr-2"></i>Export
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Orders Table -->
+<div class="bg-white rounded-lg shadow-md overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="orders-table-body" class="bg-white divide-y divide-gray-200">
+                <!-- Orders will be loaded here -->
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    <div id="pagination" class="px-6 py-4 border-t border-gray-200">
+        <!-- Pagination will be loaded here -->
+    </div>
+</div>
+
+<!-- Order Detail Modal -->
+<div id="order-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b">
+            <div class="flex justify-between items-center">
+                <h3 class="text-xl font-semibold" id="modal-title">Order Details</h3>
+                <button onclick="closeOrderModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+        <div id="order-modal-content" class="p-6">
+            <!-- Order details will be loaded here -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/admin_orders.js' %}"></script>
+<script>
+    let currentPage = 1;
+    let currentStatus = '';
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        loadOrders();
+        
+        // Status filter change
+        document.getElementById('status-filter').addEventListener('change', function(e) {
+            currentStatus = e.target.value;
+            currentPage = 1;
+            loadOrders();
+        });
+    });
+    
+    async function loadOrders() {
+        try {
+            let url = `/api/orders/?page=${currentPage}`;
+            if (currentStatus) {
+                url += `&status=${currentStatus}`;
+            }
+            
+            const response = await fetch(url);
+            if (response.ok) {
+                const data = await response.json();
+                renderOrdersTable(data);
+            }
+        } catch (error) {
+            console.error('Failed to load orders:', error);
+            showToast('Failed to load orders', 'error');
+        }
+    }
+    
+    function renderOrdersTable(data) {
+        const tbody = document.getElementById('orders-table-body');
+        const pagination = document.getElementById('pagination');
+        
+        if (data.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                        <i class="fas fa-shopping-bag text-4xl text-gray-300 mb-4"></i>
+                        <p class="text-lg">No orders found</p>
+                    </td>
+                </tr>
+            `;
+            pagination.innerHTML = '';
+            return;
+        }
+        
+        tbody.innerHTML = data.map(order => `
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div>
+                        <div class="text-sm font-medium text-gray-900">${order.order_number}</div>
+                        <div class="text-sm text-gray-500">${order.item_count} items</div>
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">${order.customer_name}</div>
+                    <div class="text-sm text-gray-500">${order.customer_email}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${new Date(order.created_at).toLocaleDateString()}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    $${parseFloat(order.grand_total).toFixed(2)}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        order.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+                        order.status === 'processing' ? 'bg-purple-100 text-purple-800' :
+                        order.status === 'shipped' ? 'bg-indigo-100 text-indigo-800' :
+                        order.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                        'bg-red-100 text-red-800'
+                    }">
+                        ${order.status}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">
+                    ${order.payment_status}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button onclick="viewOrderDetails(${order.id})" class="text-blue-600 hover:text-blue-900 mr-3">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button onclick="updateOrderStatus(${order.id})" class="text-green-600 hover:text-green-900">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+        
+        // Render pagination
+        renderPagination(pagination, data.pagination);
+    }
+    
+    function renderPagination(container, pagination) {
+        if (!pagination) return;
+        
+        const totalPages = pagination.total_pages;
+        container.innerHTML = `
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-gray-700">
+                    Showing page ${currentPage} of ${totalPages}
+                </div>
+                <div class="flex space-x-2">
+                    ${currentPage > 1 ? `
+                        <button onclick="goToPage(${currentPage - 1})" class="px-3 py-1 border rounded hover:bg-gray-50">
+                            Previous
+                        </button>
+                    ` : ''}
+                    
+                    ${Array.from({length: Math.min(5, totalPages)}, (_, i) => {
+                        const pageNum = i + 1;
+                        return `
+                            <button onclick="goToPage(${pageNum})" 
+                                    class="px-3 py-1 border rounded ${
+                                        pageNum === currentPage ? 'bg-blue-600 text-white' : 'hover:bg-gray-50'
+                                    }">
+                                ${pageNum}
+                            </button>
+                        `;
+                    }).join('')}
+                    
+                    ${currentPage < totalPages ? `
+                        <button onclick="goToPage(${currentPage + 1})" class="px-3 py-1 border rounded hover:bg-gray-50">
+                            Next
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+    
+    function goToPage(page) {
+        currentPage = page;
+        loadOrders();
+    }
+    
+    async function viewOrderDetails(orderId) {
+        try {
+            const response = await fetch(`/api/orders/${orderId}/`);
+            if (response.ok) {
+                const order = await response.json();
+                showOrderModal(order);
+            }
+        } catch (error) {
+            console.error('Failed to load order details:', error);
+            showToast('Failed to load order details', 'error');
+        }
+    }
+    
+    function showOrderModal(order) {
+        document.getElementById('modal-title').textContent = `Order: ${order.order_number}`;
+        document.getElementById('order-modal-content').innerHTML = `
+            <div class="space-y-6">
+                <!-- Order Summary -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="font-semibold mb-2">Customer Information</h4>
+                        <p><strong>Name:</strong> ${order.customer_name}</p>
+                        <p><strong>Email:</strong> ${order.customer_email}</p>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold mb-2">Order Information</h4>
+                        <p><strong>Status:</strong> ${order.status}</p>
+                        <p><strong>Payment:</strong> ${order.payment_status}</p>
+                        <p><strong>Total:</strong> $${parseFloat(order.grand_total).toFixed(2)}</p>
+                    </div>
+                </div>
+                
+                <!-- Order Items -->
+                <div>
+                    <h4 class="font-semibold mb-3">Order Items</h4>
+                    <div class="space-y-3">
+                        ${order.items.map(item => `
+                            <div class="flex justify-between items-center border-b pb-2">
+                                <div>
+                                    <p class="font-medium">${item.product.name}</p>
+                                    <p class="text-sm text-gray-600">Quantity: ${item.quantity}</p>
+                                </div>
+                                <p class="font-semibold">$${(item.price * item.quantity).toFixed(2)}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+        document.getElementById('order-modal').classList.remove('hidden');
+    }
+    
+    function closeOrderModal() {
+        document.getElementById('order-modal').classList.add('hidden');
+    }
+    
+    async function updateOrderStatus(orderId) {
+        const newStatus = prompt('Enter new status (pending, confirmed, processing, shipped, delivered, cancelled):');
+        if (newStatus && ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'].includes(newStatus)) {
+            try {
+                const response = await fetch(`/admin-dashboard/api/orders/update-status/${orderId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                
+                if (response.ok) {
+                    showToast('Order status updated successfully', 'success');
+                    loadOrders();
+                } else {
+                    showToast('Failed to update order status', 'error');
+                }
+            } catch (error) {
+                console.error('Failed to update order status:', error);
+                showToast('Failed to update order status', 'error');
+            }
+        }
+    }
+    
+    function exportOrders() {
+        showToast('Export feature coming soon!', 'info');
+    }
+</script>
+{% endblock %}

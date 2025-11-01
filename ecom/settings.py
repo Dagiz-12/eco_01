@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'notifications',
     'coupons',
     'home',
+    'admin_dashboard',
 
 ]
 

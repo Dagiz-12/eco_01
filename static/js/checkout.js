@@ -436,103 +436,105 @@ async handleAddressFormSubmit(event) {
     }
 
     async placeOrder() {
-        if (!this.shippingAddressId || !this.billingAddressId || !this.paymentMethod) {
-            showToast('Please complete all required fields', 'error');
-            return;
-        }
+    if (!this.shippingAddressId || !this.billingAddressId || !this.paymentMethod) {
+        showToast('Please complete all required fields', 'error');
+        return;
+    }
 
-        const button = document.getElementById('place-order-btn');
-        const originalText = button.innerHTML;
-        
-        // Use ajaxUtils for loading state if available
+    const button = document.getElementById('place-order-btn');
+    const originalText = button.innerHTML;
+    
+    // Use ajaxUtils for loading state if available
+    if (window.ajaxUtils) {
+        window.ajaxUtils.showLoading(button, 'Placing Order...');
+    } else {
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Placing Order...';
+    }
+
+    try {
+        const orderData = {
+            shipping_address_id: this.shippingAddressId,
+            billing_address_id: this.billingAddressId,
+            payment_method: this.paymentMethod
+        };
+
+        console.log('Sending order data:', orderData);
+
+        // Use ajaxUtils if available, otherwise use fetch
+        let response;
         if (window.ajaxUtils) {
-            window.ajaxUtils.showLoading(button, 'Placing Order...');
+            response = await window.ajaxUtils.makeRequest(
+                '/api/orders/create/',
+                'POST',
+                orderData
+            );
         } else {
-            button.disabled = true;
-            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Placing Order...';
+            // Fallback to fetch
+            const fetchResponse = await fetch('/api/orders/create/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify(orderData)
+            });
+            
+            const data = await fetchResponse.json();
+            response = {
+                success: fetchResponse.ok,
+                data: data,
+                status: fetchResponse.status
+            };
         }
 
-        try {
-            const orderData = {
-                shipping_address_id: this.shippingAddressId,
-                billing_address_id: this.billingAddressId,
-                payment_method: this.paymentMethod
-            };
+        console.log('Order response:', response);
 
-            console.log('Sending order data:', orderData);
-
-            // Use ajaxUtils if available, otherwise use fetch
-            let response;
-            if (window.ajaxUtils) {
-                response = await window.ajaxUtils.makeRequest(
-                    '/api/orders/create/',
-                    'POST',
-                    orderData
-                );
-            } else {
-                // Fallback to fetch
-                const fetchResponse = await fetch('/api/orders/create/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCSRFToken()
-                    },
-                    body: JSON.stringify(orderData)
-                });
-                
-                const data = await fetchResponse.json();
-                response = {
-                    success: fetchResponse.ok,
-                    data: data,
-                    status: fetchResponse.status
-                };
-            }
-
-            console.log('Order response:', response);
-
-            if (response.success) {
-                showToast('Order placed successfully!', 'success');
-                
-                // Redirect to order detail page
-                setTimeout(() => {
-                    if (response.data && response.data.order) {
-                        window.location.href = `/orders/${response.data.order.id}/`;
-                    } else {
-                        window.location.href = '/orders/';
-                    }
-                }, 2000);
-            } else {
-                console.error('Order creation failed:', response);
-                
-                // Handle different error types
-                let errorMessage = 'Failed to place order';
-                if (response.error) {
-                    if (typeof response.error === 'string') {
-                        errorMessage = response.error;
-                    } else if (response.error.detail) {
-                        errorMessage = response.error.detail;
-                    } else if (response.error.error) {
-                        errorMessage = response.error.error;
-                    } else if (Array.isArray(response.error)) {
-                        errorMessage = response.error.join(', ');
-                    }
+        if (response.success) {
+            showToast('Order placed successfully!', 'success');
+            
+            // FIXED: Use the correct redirect URL
+            setTimeout(() => {
+                if (response.data && response.data.order) {
+                    // Use the new URL pattern with /detail/
+                    window.location.href = `/orders/${response.data.order.id}`;
+                } else {
+                    // Fallback to orders list
+                    window.location.href = '/orders/';
                 }
-                
-                showToast(errorMessage, 'error');
+            }, 1500);
+        } else {
+            console.error('Order creation failed:', response);
+            
+            // Handle different error types
+            let errorMessage = 'Failed to place order';
+            if (response.error) {
+                if (typeof response.error === 'string') {
+                    errorMessage = response.error;
+                } else if (response.error.detail) {
+                    errorMessage = response.error.detail;
+                } else if (response.error.error) {
+                    errorMessage = response.error.error;
+                } else if (Array.isArray(response.error)) {
+                    errorMessage = response.error.join(', ');
+                }
             }
-        } catch (error) {
-            console.error('Order placement error:', error);
-            showToast('Network error. Please try again.', 'error');
-        } finally {
-            // Reset button state
-            if (window.ajaxUtils) {
-                window.ajaxUtils.hideLoading(button);
-            } else {
-                button.disabled = false;
-                button.innerHTML = originalText;
-            }
+            
+            showToast(errorMessage, 'error');
+        }
+    } catch (error) {
+        console.error('Order placement error:', error);
+        showToast('Network error. Please try again.', 'error');
+    } finally {
+        // Reset button state
+        if (window.ajaxUtils) {
+            window.ajaxUtils.hideLoading(button);
+        } else {
+            button.disabled = false;
+            button.innerHTML = originalText;
         }
     }
+}
 }
 
 // Global functions for HTML onclick handlers

@@ -247,6 +247,7 @@ def order_detail_page(request, order_id):
 
         return render(request, 'orders/order_detail.html', {
             'order_id': order_id,
+            'order': order,  # Pass the order object
             'order_number': order.order_number,
         })
     except Exception as e:
@@ -269,3 +270,8 @@ class TestOrderView(APIView):
             'data_received': request.data,
             'authenticated': True
         }, status=status.HTTP_200_OK)
+
+
+def order_list_page(request):
+    """Render the order list HTML page"""
+    return render(request, 'orders/order_list.html')

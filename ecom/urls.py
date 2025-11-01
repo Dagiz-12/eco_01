@@ -11,6 +11,8 @@ urlpatterns = [
     # Home app - HTML pages
     path('', include('home.urls')),
 
+    path('admin-dashboard/', include('admin_dashboard.urls')),
+
     # Home API endpoints
     path('api/home/', include([
         path('categories/', views.categories_api, name='categories-api'),
@@ -24,15 +26,19 @@ urlpatterns = [
     path('api/users/', include('users.urls')),
     path('api/products/', include('products.urls')),
     path('api/cart/', include('cart.urls')),
-    path('api/orders/', include('orders.urls')),  # API endpoints
+
+
+    # HTML routes for orders - SEPARATE NAMESPACE
+    # HTML pages - NOTE: Different path structure
+    path('orders/', include('orders.urls_html')),
+
+    # Other API routes
     path('api/payments/', include('payments.urls')),
     path('api/reviews/', include('reviews.urls')),
     path('api/wishlist/', include('wishlist.urls')),
     path('api/notifications/', include('notifications.urls')),
     path('api/coupons/', include('coupons.urls')),
-
-    # HTML routes for orders - SEPARATE FILE
-    path('orders/', include('orders.urls_html')),  # HTML pages
+    path('api/orders/', include('orders.urls')),  # API endpoints
 
     # REST Framework auth URLs
     path('api-auth/', include('rest_framework.urls')),

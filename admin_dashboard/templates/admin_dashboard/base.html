@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin Dashboard - HagerBet{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {% load static %}
+</head>
+<body class="bg-gray-100">
+    <!-- Admin Header -->
+    <header class="bg-white shadow-lg">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo & Brand -->
+                <div class="flex items-center space-x-4">
+                    <a href="{% url 'admin_dashboard:dashboard-home' %}" class="flex items-center space-x-2">
+                        <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
+                            <span class="text-white font-bold text-sm">AD</span>
+                        </div>
+                        <span class="text-xl font-bold text-gray-800">Admin Dashboard</span>
+                    </a>
+                </div>
+
+                <!-- Admin Navigation -->
+                <nav class="hidden md:flex items-center space-x-6">
+                    <a href="{% url 'admin_dashboard:dashboard-home' %}" 
+                       class="text-gray-700 hover:text-blue-600 font-medium transition-colors">
+                        <i class="fas fa-tachometer-alt mr-1"></i>Dashboard
+                    </a>
+                    <a href="{% url 'admin_dashboard:analytics' %}" 
+                       class="text-gray-700 hover:text-blue-600 font-medium transition-colors">
+                        <i class="fas fa-chart-line mr-1"></i>Analytics
+                    </a>
+                    <a href="{% url 'admin_dashboard:order-management' %}" 
+                       class="text-gray-700 hover:text-blue-600 font-medium transition-colors">
+                        <i class="fas fa-shopping-bag mr-1"></i>Orders
+                    </a>
+                    <a href="{% url 'admin_dashboard:product-management' %}" 
+                       class="text-gray-700 hover:text-blue-600 font-medium transition-colors">
+                        <i class="fas fa-cube mr-1"></i>Products
+                    </a>
+                    <a href="{% url 'admin_dashboard:user-management' %}" 
+                       class="text-gray-700 hover:text-blue-600 font-medium transition-colors">
+                        <i class="fas fa-users mr-1"></i>Users
+                    </a>
+                </nav>
+
+                <!-- User Menu & Notifications -->
+                <div class="flex items-center space-x-4">
+                    <!-- Notifications -->
+                    <div class="relative" id="notification-bell">
+                        <button class="text-gray-700 hover:text-blue-600 transition-colors relative">
+                            <i class="fas fa-bell text-xl"></i>
+                            <span id="notification-count" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
+                        </button>
+                        <div id="notification-dropdown" class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl py-2 hidden z-50">
+                            <div class="px-4 py-2 border-b">
+                                <h3 class="font-semibold">Notifications</h3>
+                            </div>
+                            <div id="notification-list" class="max-h-64 overflow-y-auto">
+                                <!-- Notifications will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- User Menu -->
+                    <div class="relative group">
+                        <button class="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition-colors">
+                            <i class="fas fa-user-circle text-xl"></i>
+                            <span>{{ request.user.username }}</span>
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </button>
+                        <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-2 hidden group-hover:block">
+                            <a href="{% url 'admin:index' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-cog mr-2"></i>Django Admin
+                            </a>
+                            <a href="{% url 'home:home' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-store mr-2"></i>View Store
+                            </a>
+                            <a href="{% url 'users:user-logout' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Navigation -->
+    <div class="bg-white shadow-md md:hidden">
+        <div class="container mx-auto px-4 py-2">
+            <div class="flex justify-around">
+                <a href="{% url 'admin_dashboard:dashboard-home' %}" class="text-center text-gray-700 hover:text-blue-600">
+                    <i class="fas fa-tachometer-alt block text-lg"></i>
+                    <span class="text-xs">Dashboard</span>
+                </a>
+                <a href="{% url 'admin_dashboard:analytics' %}" class="text-center text-gray-700 hover:text-blue-600">
+                    <i class="fas fa-chart-line block text-lg"></i>
+                    <span class="text-xs">Analytics</span>
+                </a>
+                <a href="{% url 'admin_dashboard:order-management' %}" class="text-center text-gray-700 hover:text-blue-600">
+                    <i class="fas fa-shopping-bag block text-lg"></i>
+                    <span class="text-xs">Orders</span>
+                </a>
+                <a href="{% url 'admin_dashboard:product-management' %}" class="text-center text-gray-700 hover:text-blue-600">
+                    <i class="fas fa-cube block text-lg"></i>
+                    <span class="text-xs">Products</span>
+                </a>
+                <a href="{% url 'admin_dashboard:user-management' %}" class="text-center text-gray-700 hover:text-blue-600">
+                    <i class="fas fa-users block text-lg"></i>
+                    <span class="text-xs">Users</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <!-- Messages Container -->
+    <div id="messages-container" class="fixed top-20 right-4 z-50 space-y-2 max-w-sm"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.5.0/axios.min.js"></script>
+    <script>
+        // Global admin functions
+        function getCSRFToken() {
+            const name = 'csrftoken';
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('messages-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = `p-4 rounded-lg shadow-lg ${
+                type === 'success' ? 'bg-green-500 text-white' :
+                type === 'error' ? 'bg-red-500 text-white' :
+                type === 'warning' ? 'bg-yellow-500 text-white' :
+                'bg-blue-500 text-white'
+            }`;
+            toast.textContent = message;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 5000);
+        }
+
+        // Notification bell functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const notificationBell = document.getElementById('notification-bell');
+            const notificationDropdown = document.getElementById('notification-dropdown');
+            
+            if (notificationBell) {
+                notificationBell.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    notificationDropdown.classList.toggle('hidden');
+                    loadNotifications();
+                });
+            }
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function() {
+                if (notificationDropdown) {
+                    notificationDropdown.classList.add('hidden');
+                }
+            });
+        });
+
+        async function loadNotifications() {
+            try {
+                const response = await fetch('/admin-dashboard/api/notifications/');
+                if (response.ok) {
+                    const notifications = await response.json();
+                    const container = document.getElementById('notification-list');
+                    const countElement = document.getElementById('notification-count');
+                    
+                    if (container) {
+                        if (notifications.length === 0) {
+                            container.innerHTML = '<div class="px-4 py-3 text-gray-500 text-center">No new notifications</div>';
+                        } else {
+                            container.innerHTML = notifications.map(notif => `
+                                <div class="px-4 py-3 border-b hover:bg-gray-50 cursor-pointer" onclick="handleNotificationClick(${notif.id})">
+                                    <div class="flex justify-between items-start">
+                                        <span class="font-semibold text-sm">${notif.title}</span>
+                                        <span class="text-xs text-gray-500">${new Date(notif.created_at).toLocaleTimeString()}</span>
+                                    </div>
+                                    <p class="text-sm text-gray-600 mt-1">${notif.message}</p>
+                                </div>
+                            `).join('');
+                        }
+                    }
+                    
+                    if (countElement && notifications.length > 0) {
+                        countElement.textContent = notifications.length;
+                        countElement.classList.remove('hidden');
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load notifications:', error);
+            }
+        }
+
+        function handleNotificationClick(notificationId) {
+            // Mark as read and handle notification click
+            console.log('Notification clicked:', notificationId);
+        }
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
