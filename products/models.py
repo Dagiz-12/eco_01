@@ -188,10 +188,10 @@ class Product(models.Model):
     def primary_image(self):
         """Get the primary product image or first available image"""
         primary = self.images.filter(is_primary=True).first()
-        if primary:
-            return primary.image
+        if primary and primary.image:
+            return primary.image.url  # FIX: Add .url to get the actual URL
         first_image = self.images.first()
-        return first_image.image if first_image else None
+        return first_image.image.url if first_image and first_image.image else None
 
 
 class ProductImage(models.Model):

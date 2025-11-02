@@ -1,0 +1,167 @@
+{% extends 'admin_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Analytics - HagerBet Admin{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-3xl font-bold text-gray-800">Analytics Dashboard</h1>
+    <p class="text-gray-600">Comprehensive business intelligence and reporting</p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+    <!-- Sales Chart -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold mb-4">Sales Overview</h2>
+        <div class="flex space-x-4 mb-4">
+            <button onclick="loadSalesData('week')" class="px-3 py-1 bg-blue-600 text-white rounded">Week</button>
+            <button onclick="loadSalesData('month')" class="px-3 py-1 bg-gray-200 rounded">Month</button>
+            <button onclick="loadSalesData('year')" class="px-3 py-1 bg-gray-200 rounded">Year</button>
+        </div>
+        <canvas id="salesChart" width="400" height="200"></canvas>
+    </div>
+
+    <!-- Top Products -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold mb-4">Top Performing Products</h2>
+        <div id="top-products-list">
+            <div class="text-center py-4">
+                <i class="fas fa-spinner fa-spin text-blue-600"></i>
+                <p class="text-gray-600">Loading top products...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- User Analytics -->
+<div class="bg-white rounded-lg shadow-md p-6 mb-8">
+    <h2 class="text-xl font-semibold mb-4">User Analytics</h2>
+    <div id="user-analytics">
+        <div class="text-center py-4">
+            <i class="fas fa-spinner fa-spin text-blue-600"></i>
+            <p class="text-gray-600">Loading user analytics...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let salesChart;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadSalesData('week');
+        loadTopProducts();
+        loadUserAnalytics();
+    });
+
+    async function loadSalesData(period) {
+        try {
+            const response = await fetch(`/admin-dashboard/api/analytics/sales/?period=${period}`);
+            if (response.ok) {
+                const data = await response.json();
+                renderSalesChart(data);
+            }
+        } catch (error) {
+            console.error('Failed to load sales data:', error);
+        }
+    }
+
+    function renderSalesChart(data) {
+        const ctx = document.getElementById('salesChart').getContext('2d');
+        
+        if (salesChart) {
+            salesChart.destroy();
+        }
+
+        salesChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.sales_data.map(item => item.date),
+                datasets: [{
+                    label: 'Sales ($)',
+                    data: data.sales_data.map(item => item.sales),
+                    borderColor: 'rgb(59, 130, 246)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: `Sales Data - ${data.period}`
+                    }
+                }
+            }
+        });
+    }
+
+    async function loadTopProducts() {
+        try {
+            const response = await fetch('/admin-dashboard/api/analytics/products/');
+            if (response.ok) {
+                const data = await response.json();
+                renderTopProducts(data.top_categories);
+            }
+        } catch (error) {
+            console.error('Failed to load top products:', error);
+        }
+    }
+
+    function renderTopProducts(products) {
+        const container = document.getElementById('top-products-list');
+        container.innerHTML = products.map(product => `
+            <div class="flex justify-between items-center py-2 border-b">
+                <div>
+                    <p class="font-semibold">${product.name}</p>
+                    <p class="text-sm text-gray-600">${product.orders} orders</p>
+                </div>
+                <div class="text-right">
+                    <p class="font-semibold">${product.products} products</p>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    async function loadUserAnalytics() {
+        try {
+            const response = await fetch('/admin-dashboard/api/analytics/users/');
+            if (response.ok) {
+                const data = await response.json();
+                renderUserAnalytics(data);
+            }
+        } catch (error) {
+            console.error('Failed to load user analytics:', error);
+        }
+    }
+
+    function renderUserAnalytics(data) {
+        const container = document.getElementById('user-analytics');
+        container.innerHTML = `
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="text-center p-4 bg-blue-50 rounded-lg">
+                    <p class="text-2xl font-bold text-blue-600">${data.total_users}</p>
+                    <p class="text-sm text-gray-600">Total Users</p>
+                </div>
+                <div class="text-center p-4 bg-green-50 rounded-lg">
+                    <p class="text-2xl font-bold text-green-600">${data.new_users}</p>
+                    <p class="text-sm text-gray-600">New This Month</p>
+                </div>
+                <div class="text-center p-4 bg-purple-50 rounded-lg">
+                    <p class="text-2xl font-bold text-purple-600">${data.active_users}</p>
+                    <p class="text-sm text-gray-600">Active Users</p>
+                </div>
+                <div class="text-center p-4 bg-orange-50 rounded-lg">
+                    <p class="text-2xl font-bold text-orange-600">${data.role_distribution.find(r => r.role === 'customer')?.count || 0}</p>
+                    <p class="text-sm text-gray-600">Customers</p>
+                </div>
+            </div>
+        `;
+    }
+</script>
+{% endblock %}

@@ -34,7 +34,12 @@ urlpatterns = [
     path('api/analytics/products/', views.ProductAnalyticsAPI.as_view(),
          name='api-product-analytics'),
 
-    # Management APIs
+    # Management APIs - ADD THESE
+    path('api/orders/', views.OrderManagementAPI.as_view(), name='api-orders'),
+    path('api/products/', views.ProductManagementAPI.as_view(), name='api-products'),
+    path('api/users/', views.UserManagementAPI.as_view(), name='api-users'),
+
+    # Existing management actions
     path('api/users/verify/<int:user_id>/',
          views.verify_user, name='api-verify-user'),
     path('api/orders/update-status/<int:order_id>/',

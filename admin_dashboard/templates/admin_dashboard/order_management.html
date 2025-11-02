@@ -75,7 +75,6 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/admin_orders.js' %}"></script>
 <script>
     let currentPage = 1;
     let currentStatus = '';
@@ -93,7 +92,7 @@
     
     async function loadOrders() {
         try {
-            let url = `/api/orders/?page=${currentPage}`;
+            let url = `/admin-dashboard/api/orders/?page=${currentPage}`;
             if (currentStatus) {
                 url += `&status=${currentStatus}`;
             }
@@ -102,10 +101,12 @@
             if (response.ok) {
                 const data = await response.json();
                 renderOrdersTable(data);
+            } else {
+                throw new Error('Failed to fetch orders');
             }
         } catch (error) {
             console.error('Failed to load orders:', error);
-            showToast('Failed to load orders', 'error');
+            showToast('Failed to load orders: ' + error.message, 'error');
         }
     }
     
@@ -113,7 +114,8 @@
         const tbody = document.getElementById('orders-table-body');
         const pagination = document.getElementById('pagination');
         
-        if (data.length === 0) {
+        // Check if data.orders exists and is an array
+        if (!data.orders || data.orders.length === 0) {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="7" class="px-6 py-8 text-center text-gray-500">
@@ -126,7 +128,7 @@
             return;
         }
         
-        tbody.innerHTML = data.map(order => `
+        tbody.innerHTML = data.orders.map(order => `
             <tr class="hover:bg-gray-50">
                 <td class="px-6 py-4 whitespace-nowrap">
                     <div>
@@ -171,13 +173,15 @@
         `).join('');
         
         // Render pagination
-        renderPagination(pagination, data.pagination);
+        if (data.pagination) {
+            renderPagination(pagination, data.pagination);
+        }
     }
     
     function renderPagination(container, pagination) {
         if (!pagination) return;
         
-        const totalPages = pagination.total_pages;
+        const totalPages = Math.ceil(pagination.total / pagination.limit);
         container.innerHTML = `
             <div class="flex items-center justify-between">
                 <div class="text-sm text-gray-700">
@@ -219,54 +223,12 @@
     
     async function viewOrderDetails(orderId) {
         try {
-            const response = await fetch(`/api/orders/${orderId}/`);
-            if (response.ok) {
-                const order = await response.json();
-                showOrderModal(order);
-            }
+            // For now, just show basic info since we don't have detail endpoint
+            showToast('Order details feature coming soon!', 'info');
         } catch (error) {
             console.error('Failed to load order details:', error);
             showToast('Failed to load order details', 'error');
         }
-    }
-    
-    function showOrderModal(order) {
-        document.getElementById('modal-title').textContent = `Order: ${order.order_number}`;
-        document.getElementById('order-modal-content').innerHTML = `
-            <div class="space-y-6">
-                <!-- Order Summary -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <h4 class="font-semibold mb-2">Customer Information</h4>
-                        <p><strong>Name:</strong> ${order.customer_name}</p>
-                        <p><strong>Email:</strong> ${order.customer_email}</p>
-                    </div>
-                    <div>
-                        <h4 class="font-semibold mb-2">Order Information</h4>
-                        <p><strong>Status:</strong> ${order.status}</p>
-                        <p><strong>Payment:</strong> ${order.payment_status}</p>
-                        <p><strong>Total:</strong> $${parseFloat(order.grand_total).toFixed(2)}</p>
-                    </div>
-                </div>
-                
-                <!-- Order Items -->
-                <div>
-                    <h4 class="font-semibold mb-3">Order Items</h4>
-                    <div class="space-y-3">
-                        ${order.items.map(item => `
-                            <div class="flex justify-between items-center border-b pb-2">
-                                <div>
-                                    <p class="font-medium">${item.product.name}</p>
-                                    <p class="text-sm text-gray-600">Quantity: ${item.quantity}</p>
-                                </div>
-                                <p class="font-semibold">$${(item.price * item.quantity).toFixed(2)}</p>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            </div>
-        `;
-        document.getElementById('order-modal').classList.remove('hidden');
     }
     
     function closeOrderModal() {

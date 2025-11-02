@@ -1,0 +1,133 @@
+{% extends 'admin_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Payment Management - HagerBet Admin{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-3xl font-bold text-gray-800">Payment Management</h1>
+    <p class="text-gray-600">Monitor and manage payment transactions</p>
+</div>
+
+<!-- Payment Stats -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600">Total Payments</p>
+                <p class="text-2xl font-bold text-gray-800" id="total-payments">0</p>
+            </div>
+            <div class="p-3 bg-green-100 rounded-lg">
+                <i class="fas fa-credit-card text-green-600 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600">Pending</p>
+                <p class="text-2xl font-bold text-gray-800" id="pending-payments">0</p>
+            </div>
+            <div class="p-3 bg-yellow-100 rounded-lg">
+                <i class="fas fa-clock text-yellow-600 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600">Completed</p>
+                <p class="text-2xl font-bold text-gray-800" id="completed-payments">0</p>
+            </div>
+            <div class="p-3 bg-blue-100 rounded-lg">
+                <i class="fas fa-check-circle text-blue-600 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600">Failed</p>
+                <p class="text-2xl font-bold text-gray-800" id="failed-payments">0</p>
+            </div>
+            <div class="p-3 bg-red-100 rounded-lg">
+                <i class="fas fa-times-circle text-red-600 text-xl"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Payments -->
+<div class="bg-white rounded-lg shadow-md p-6">
+    <h2 class="text-xl font-semibold mb-4">Recent Payment Transactions</h2>
+    <div id="recent-payments">
+        <div class="text-center py-8">
+            <i class="fas fa-spinner fa-spin text-2xl text-blue-600 mb-2"></i>
+            <p class="text-gray-600">Loading payment data...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        loadPaymentData();
+    });
+
+    async function loadPaymentData() {
+        try {
+            // Load payment stats
+            const statsResponse = await fetch('/api/payments/stats/');
+            if (statsResponse.ok) {
+                const stats = await statsResponse.json();
+                document.getElementById('total-payments').textContent = stats.total;
+                document.getElementById('pending-payments').textContent = stats.pending;
+                document.getElementById('completed-payments').textContent = stats.completed;
+                document.getElementById('failed-payments').textContent = stats.failed;
+            }
+
+            // Load recent payments
+            const paymentsResponse = await fetch('/api/payments/?limit=10');
+            if (paymentsResponse.ok) {
+                const payments = await paymentsResponse.json();
+                renderRecentPayments(payments);
+            }
+        } catch (error) {
+            console.error('Failed to load payment data:', error);
+        }
+    }
+
+    function renderRecentPayments(payments) {
+        const container = document.getElementById('recent-payments');
+        
+        if (payments.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-center py-4">No payment transactions found</p>';
+            return;
+        }
+
+        container.innerHTML = payments.map(payment => `
+            <div class="flex items-center justify-between py-3 border-b">
+                <div class="flex-1">
+                    <p class="font-semibold">Order #${payment.order?.order_number || 'N/A'}</p>
+                    <p class="text-sm text-gray-600">${payment.customer_email || 'Unknown customer'}</p>
+                </div>
+                <div class="text-right">
+                    <p class="font-semibold">$${payment.amount}</p>
+                    <span class="inline-block px-2 py-1 text-xs rounded-full ${
+                        payment.status === 'completed' ? 'bg-green-100 text-green-800' :
+                        payment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                    }">
+                        ${payment.status}
+                    </span>
+                    <p class="text-xs text-gray-500 mt-1">${new Date(payment.created_at).toLocaleDateString()}</p>
+                </div>
+            </div>
+        `).join('');
+    }
+</script>
+{% endblock %}

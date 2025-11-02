@@ -1,3 +1,5 @@
+from django.http import JsonResponse
+import traceback
 from django.shortcuts import render
 
 # Create your views here.
@@ -18,6 +20,14 @@ from products.models import Product, Category
 from orders.models import Order, OrderStatusHistory
 from payments.models import Payment
 from reviews.models import Review
+from .serializers import (
+    UserManagementSerializer,
+    ProductManagementSerializer,
+    OrderManagementSerializer,
+    OrderDetailManagementSerializer,  # This should work now
+    PaymentManagementSerializer,
+    AnalyticsSerializer
+)
 
 
 def admin_required(function=None):
@@ -204,33 +214,38 @@ class UserAnalyticsAPI(APIView):
 @method_decorator(admin_required, name='dispatch')
 class ProductAnalyticsAPI(APIView):
     def get(self, request):
-        # Low stock products
-        low_stock_products = Product.objects.filter(
-            inventory__quantity__lte=10
-        ).count()
+        try:
+            # FIX: Use quantity instead of inventory
+            low_stock_products = Product.objects.filter(
+                quantity__lte=10,  # FIX: Use quantity field directly
+                track_quantity=True
+            ).count()
 
-        # Top categories
-        top_categories = Category.objects.annotate(
-            product_count=Count('products'),
-            order_count=Count('products__order_items')
-        ).order_by('-order_count')[:5]
+            # Top categories
+            top_categories = Category.objects.annotate(
+                product_count=Count('products'),
+                order_count=Count('products__order_items')
+            ).order_by('-order_count')[:5]
 
-        category_data = [
-            {
-                'name': cat.name,
-                'products': cat.product_count,
-                'orders': cat.order_count
-            }
-            for cat in top_categories
-        ]
+            category_data = [
+                {
+                    'name': cat.name,
+                    'products': cat.product_count,
+                    'orders': cat.order_count
+                }
+                for cat in top_categories
+            ]
 
-        return Response({
-            'low_stock_count': low_stock_products,
-            'top_categories': category_data,
-            'total_products': Product.objects.count(),
-            'active_products': Product.objects.filter(is_active=True).count()
-        })
-
+            return Response({
+                'low_stock_count': low_stock_products,
+                'top_categories': category_data,
+                'total_products': Product.objects.count(),
+                # FIX: Use status instead of is_active
+                'active_products': Product.objects.filter(status='published').count()
+            })
+        except Exception as e:
+            print(f"DEBUG: Error in ProductAnalyticsAPI: {str(e)}")
+            return Response({'error': str(e)}, status=500)
 # Management Actions
 
 
@@ -278,22 +293,165 @@ def update_order_status(request, order_id):
 @admin_required
 def update_inventory(request, product_id):
     product = get_object_or_404(Product, id=product_id)
-    new_quantity = request.POST.get('quantity')
 
-    try:
-        quantity = int(new_quantity)
-        if quantity >= 0:
-            # Update inventory - you might need to adjust based on your inventory model
-            if hasattr(product, 'inventory'):
-                product.inventory.quantity = quantity
-                product.inventory.save()
-            else:
-                # Fallback if no inventory model
-                product.stock_quantity = quantity
+    if request.method == 'POST':
+        data = json.loads(request.body)
+
+        # Handle status updates
+        if data.get('action') == 'update_status':
+            new_status = data.get('status')
+            if new_status in ['draft', 'published', 'archived']:
+                product.status = new_status
                 product.save()
+                return JsonResponse({'success': True, 'message': 'Product status updated'})
 
-            return Response({'success': True, 'message': 'Inventory updated'})
-    except ValueError:
-        pass
+        # Handle quantity updates
+        new_quantity = data.get('quantity')
+        if new_quantity is not None:
+            try:
+                quantity = int(new_quantity)
+                if quantity >= 0:
+                    product.quantity = quantity
+                    product.save()
+                    return JsonResponse({'success': True, 'message': 'Inventory updated'})
+            except ValueError:
+                pass
 
-    return Response({'success': False, 'message': 'Invalid quantity'}, status=400)
+    return JsonResponse({'success': False, 'message': 'Invalid request'}, status=400)
+
+
+# Add these to your existing views.py
+
+@method_decorator(admin_required, name='dispatch')
+class UserManagementAPI(APIView):
+    def get(self, request):
+        try:
+            print("DEBUG: UserManagementAPI called")
+            role_filter = request.GET.get('role', '')
+            verification_filter = request.GET.get('verification', '')
+            page = int(request.GET.get('page', 1))
+            page_size = 20
+
+            queryset = User.objects.all()
+            print(f"DEBUG: Initial queryset count: {queryset.count()}")
+
+            if role_filter:
+                queryset = queryset.filter(role=role_filter)
+                print(f"DEBUG: After role filter: {queryset.count()}")
+            if verification_filter == 'pending':
+                queryset = queryset.filter(email_verified=False)
+                print(f"DEBUG: After pending filter: {queryset.count()}")
+            elif verification_filter == 'verified':
+                queryset = queryset.filter(email_verified=True)
+                print(f"DEBUG: After verified filter: {queryset.count()}")
+
+            total_count = queryset.count()
+            start_idx = (page - 1) * page_size
+            users = queryset.order_by(
+                '-date_joined')[start_idx:start_idx + page_size]
+            print(f"DEBUG: Final users count: {len(users)}")
+
+            # Check if serializer exists
+            from .serializers import UserManagementSerializer
+            print("DEBUG: User serializer imported successfully")
+
+            serializer = UserManagementSerializer(users, many=True)
+            print("DEBUG: User serialization successful")
+
+            return Response({
+                'users': serializer.data,
+                'pagination': {
+                    'page': page,
+                    'page_size': page_size,
+                    'total_count': total_count,
+                    'total_pages': (total_count + page_size - 1) // page_size
+                }
+            })
+        except Exception as e:
+            print(f"DEBUG: Error in UserManagementAPI: {str(e)}")
+            print(traceback.format_exc())
+            return Response({'error': str(e)}, status=500)
+
+
+@method_decorator(admin_required, name='dispatch')
+class ProductManagementAPI(APIView):
+    def get(self, request):
+        try:
+            print("DEBUG: ProductManagementAPI called")
+            products = Product.objects.all()[:50]
+            print(f"DEBUG: Found {len(products)} products")
+
+            # Check if serializer exists
+            from .serializers import ProductManagementSerializer
+            print("DEBUG: Serializer imported successfully")
+
+            serializer = ProductManagementSerializer(products, many=True)
+            print("DEBUG: Serialization successful")
+
+            return Response(serializer.data)
+        except Exception as e:
+            print(f"DEBUG: Error in ProductManagementAPI: {str(e)}")
+            print(traceback.format_exc())
+            return Response({'error': str(e)}, status=500)
+# Add to urls.py
+
+
+# Add payment stats endpoint
+
+
+@method_decorator(admin_required, name='dispatch')
+class PaymentStatsAPI(APIView):
+    def get(self, request):
+        from payments.models import Payment
+        stats = {
+            'total': Payment.objects.count(),
+            'pending': Payment.objects.filter(status='pending').count(),
+            'completed': Payment.objects.filter(status='completed').count(),
+            'failed': Payment.objects.filter(status='failed').count(),
+        }
+        return Response(stats)
+
+
+# Add this to your admin_dashboard/views.py
+
+@method_decorator(admin_required, name='dispatch')
+class OrderManagementAPI(APIView):
+    def get(self, request):
+        try:
+            status_filter = request.GET.get('status', '')
+            page = int(request.GET.get('page', 1))
+            limit = int(request.GET.get('limit', 20))
+
+            queryset = Order.objects.all().select_related('user')
+
+            if status_filter:
+                queryset = queryset.filter(status=status_filter)
+
+            # Simple pagination
+            start_idx = (page - 1) * limit
+            end_idx = start_idx + limit
+
+            orders = list(queryset.order_by('-created_at')[start_idx:end_idx])
+            serializer = OrderManagementSerializer(orders, many=True)
+
+            return Response({
+                'orders': serializer.data,
+                'pagination': {
+                    'page': page,
+                    'limit': limit,
+                    'total': queryset.count()
+                }
+            })
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+
+@method_decorator(admin_required, name='dispatch')
+class OrderDetailAPI(APIView):
+    def get(self, request, order_id):
+        try:
+            order = Order.objects.get(id=order_id)
+            serializer = OrderDetailManagementSerializer(order)
+            return Response(serializer.data)
+        except Order.DoesNotExist:
+            return Response({'error': 'Order not found'}, status=404)

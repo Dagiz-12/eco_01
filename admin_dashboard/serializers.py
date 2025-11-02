@@ -1,9 +1,9 @@
 from rest_framework import serializers
+from django.db.models import Sum
 from users.models import User
 from products.models import Product, Category
-from orders.models import Order, OrderItem
+from orders.models import Order, OrderItem, OrderStatusHistory
 from payments.models import Payment
-from reviews.models import Review
 
 
 class UserManagementSerializer(serializers.ModelSerializer):
@@ -23,7 +23,7 @@ class UserManagementSerializer(serializers.ModelSerializer):
 
     def get_total_spent(self, obj):
         total = obj.orders.filter(payment_status='paid').aggregate(
-            total=serializers.Sum('grand_total')
+            total=Sum('grand_total')
         )['total']
         return float(total) if total else 0
 
@@ -33,22 +33,29 @@ class ProductManagementSerializer(serializers.ModelSerializer):
         source='category.name', read_only=True)
     total_sold = serializers.SerializerMethodField()
     low_stock = serializers.SerializerMethodField()
+    is_active = serializers.SerializerMethodField()
+    primary_image = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
         fields = [
             'id', 'name', 'sku', 'category', 'category_name', 'price',
             'is_active', 'is_featured', 'created_at', 'updated_at',
-            'total_sold', 'low_stock'
+            'total_sold', 'low_stock', 'primary_image', 'quantity', 'status'
         ]
 
+    def get_is_active(self, obj):
+        return obj.status == 'published'
+
     def get_total_sold(self, obj):
-        return obj.order_items.aggregate(total=serializers.Sum('quantity'))['total'] or 0
+        result = obj.order_items.aggregate(total=Sum('quantity'))
+        return result['total'] or 0
 
     def get_low_stock(self, obj):
-        if hasattr(obj, 'inventory'):
-            return obj.inventory.quantity <= 10
-        return False
+        return obj.quantity <= obj.low_stock_threshold
+
+    def get_primary_image(self, obj):
+        return obj.primary_image
 
 
 class OrderManagementSerializer(serializers.ModelSerializer):
@@ -70,12 +77,33 @@ class OrderManagementSerializer(serializers.ModelSerializer):
     def get_item_count(self, obj):
         return obj.items.count()
 
+# ADD THESE MISSING SERIALIZERS:
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source='product.name', read_only=True)
+
+    class Meta:
+        model = OrderItem
+        fields = ['id', 'product', 'product_name',
+                  'variant', 'quantity', 'price', 'line_total']
+
+
+class OrderStatusHistorySerializer(serializers.ModelSerializer):
+    created_by_name = serializers.CharField(
+        source='created_by.username', read_only=True)
+
+    class Meta:
+        model = OrderStatusHistory
+        fields = ['id', 'old_status', 'new_status',
+                  'note', 'created_by_name', 'created_at']
+
 
 class OrderDetailManagementSerializer(serializers.ModelSerializer):
     customer_name = serializers.SerializerMethodField()
     customer_email = serializers.CharField(source='user.email', read_only=True)
-    items = serializers.SerializerMethodField()
-    status_history = serializers.SerializerMethodField()
+    items = OrderItemSerializer(many=True, read_only=True)
+    status_history = OrderStatusHistorySerializer(many=True, read_only=True)
 
     class Meta:
         model = Order
@@ -89,14 +117,6 @@ class OrderDetailManagementSerializer(serializers.ModelSerializer):
 
     def get_customer_name(self, obj):
         return f"{obj.user.first_name} {obj.user.last_name}".strip() or obj.user.username
-
-    def get_items(self, obj):
-        from orders.serializers import OrderItemSerializer
-        return OrderItemSerializer(obj.items.all(), many=True).data
-
-    def get_status_history(self, obj):
-        from orders.serializers import OrderStatusHistorySerializer
-        return OrderStatusHistorySerializer(obj.status_history.all(), many=True).data
 
 
 class PaymentManagementSerializer(serializers.ModelSerializer):
