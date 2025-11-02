@@ -58,6 +58,88 @@ class ProductManagementSerializer(serializers.ModelSerializer):
         return obj.primary_image
 
 
+class ProductStatsSerializer(serializers.Serializer):
+    total_products = serializers.IntegerField()
+    published_products = serializers.IntegerField()
+    low_stock_products = serializers.IntegerField()
+    out_of_stock_products = serializers.IntegerField()
+    total_categories = serializers.IntegerField()
+    total_brands = serializers.IntegerField()
+
+
+class ProductDetailSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(
+        source='category.name', read_only=True)
+    brand_name = serializers.CharField(source='brand.name', read_only=True)
+    total_sold = serializers.SerializerMethodField()
+    low_stock = serializers.SerializerMethodField()
+    primary_image = serializers.SerializerMethodField()
+    images = serializers.SerializerMethodField()
+    variants = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Product
+        fields = [
+            'id', 'name', 'slug', 'description', 'short_description',
+            'category', 'category_name', 'brand', 'brand_name',
+            'price', 'compare_price', 'cost_per_item', 'sku', 'barcode',
+            'quantity', 'low_stock_threshold', 'track_quantity',
+            'status', 'is_featured', 'is_digital', 'meta_title', 'meta_description',
+            'created_at', 'updated_at', 'published_at',
+            'total_sold', 'low_stock', 'primary_image', 'images', 'variants'
+        ]
+
+    def get_total_sold(self, obj):
+        from django.db.models import Sum
+        result = obj.order_items.aggregate(total=Sum('quantity'))
+        return result['total'] or 0
+
+    def get_low_stock(self, obj):
+        return obj.quantity <= obj.low_stock_threshold
+
+    def get_primary_image(self, obj):
+        return obj.primary_image
+
+    def get_images(self, obj):
+        from products.serializers import ProductImageSerializer
+        images = obj.images.all()
+        return ProductImageSerializer(images, many=True).data
+
+    def get_variants(self, obj):
+        from products.serializers import ProductVariantSerializer
+        variants = obj.variants.all()
+        return ProductVariantSerializer(variants, many=True).data
+
+
+class EnhancedProductManagementSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(
+        source='category.name', read_only=True)
+    brand_name = serializers.CharField(source='brand.name', read_only=True)
+    total_sold = serializers.SerializerMethodField()
+    low_stock = serializers.SerializerMethodField()
+    primary_image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Product
+        fields = [
+            'id', 'name', 'sku', 'category', 'category_name', 'brand', 'brand_name',
+            'price', 'compare_price', 'quantity', 'low_stock_threshold',
+            'status', 'is_featured', 'created_at', 'updated_at',
+            'total_sold', 'low_stock', 'primary_image'
+        ]
+
+    def get_total_sold(self, obj):
+        from django.db.models import Sum
+        result = obj.order_items.aggregate(total=Sum('quantity'))
+        return result['total'] or 0
+
+    def get_low_stock(self, obj):
+        return obj.quantity <= obj.low_stock_threshold
+
+    def get_primary_image(self, obj):
+        return obj.primary_image
+
+
 class OrderManagementSerializer(serializers.ModelSerializer):
     customer_name = serializers.SerializerMethodField()
     customer_email = serializers.CharField(source='user.email', read_only=True)
@@ -144,3 +226,32 @@ class AnalyticsSerializer(serializers.Serializer):
         max_digits=10, decimal_places=2)
     top_products = serializers.ListField()
     customer_metrics = serializers.DictField()
+
+
+class UserDetailSerializer(serializers.ModelSerializer):
+    order_count = serializers.SerializerMethodField()
+    total_spent = serializers.SerializerMethodField()
+    addresses = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            'id', 'email', 'username', 'first_name', 'last_name',
+            'role', 'email_verified', 'date_joined', 'last_login',
+            'order_count', 'total_spent', 'is_active', 'addresses'
+        ]
+
+    def get_order_count(self, obj):
+        return obj.orders.count()
+
+    def get_total_spent(self, obj):
+        from django.db.models import Sum
+        total = obj.orders.filter(payment_status='paid').aggregate(
+            total=Sum('grand_total')
+        )['total']
+        return float(total) if total else 0
+
+    def get_addresses(self, obj):
+        from users.serializers import AddressSerializer
+        addresses = obj.addresses.all()
+        return AddressSerializer(addresses, many=True).data

@@ -1,3 +1,12 @@
+
+
+from django.http import HttpResponse, JsonResponse
+import csv
+
+
+# Add these imports at the top
+
+from datetime import datetime, timedelta
 from django.http import JsonResponse
 import traceback
 from django.shortcuts import render
@@ -9,14 +18,14 @@ from django.utils.decorators import method_decorator
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from django.db.models import Count, Sum, Avg, Q
+from django.db.models import Count, Sum, Avg, Q, F
 from django.utils import timezone
-from datetime import timedelta
+from .models import DashboardStats, AdminNotification
 import json
 
 from .models import DashboardStats, AdminNotification
 from users.models import User
-from products.models import Product, Category
+from products.models import Product, Category, Brand
 from orders.models import Order, OrderStatusHistory
 from payments.models import Payment
 from reviews.models import Review
@@ -26,7 +35,7 @@ from .serializers import (
     OrderManagementSerializer,
     OrderDetailManagementSerializer,  # This should work now
     PaymentManagementSerializer,
-    AnalyticsSerializer
+    AnalyticsSerializer, UserDetailSerializer, ProductDetailSerializer, EnhancedProductManagementSerializer
 )
 
 
@@ -75,6 +84,615 @@ def order_management(request):
 def payment_management(request):
     """Payment management interface"""
     return render(request, 'admin_dashboard/payment_management.html')
+
+
+@admin_required
+def show_add_product_form(request):
+    """Render the add product form"""
+    return render(request, 'admin_dashboard/add_product.html')
+
+
+@method_decorator(admin_required, name='dispatch')
+class AddProductAPI(APIView):
+    def post(self, request):
+        """Handle new product creation"""
+        try:
+            data = request.data
+
+            # Create new product
+            product = Product.objects.create(
+                name=data['name'],
+                description=data.get('description', ''),
+                price=float(data['price']),
+                quantity=int(data.get('quantity', 0)),
+                status=data.get('status', 'draft'),
+                category_id=data.get('category'),
+                brand_id=data.get('brand'),
+                sku=data.get('sku', ''),
+                is_featured=bool(data.get('is_featured', False))
+            )
+
+            return Response({
+                'success': True,
+                'message': 'Product created successfully',
+                'product_id': product.id
+            })
+        except Exception as e:
+            return Response({'success': False, 'message': str(e)}, status=500)
+
+
+@admin_required
+def user_action(request, user_id):
+    """Handle single user actions (toggle active, etc.)"""
+    try:
+        user = User.objects.get(id=user_id)
+
+        if request.method == 'POST':
+            data = json.loads(request.body)
+            action = data.get('action')
+
+            if action == 'toggle_active':
+                user.is_active = not user.is_active
+                user.save()
+                return JsonResponse({
+                    'success': True,
+                    'message': f'User {"activated" if user.is_active else "deactivated"} successfully'
+                })
+            else:
+                return JsonResponse({'success': False, 'message': 'Invalid action'}, status=400)
+
+    except User.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'User not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# Add these API views to your views.py
+
+
+@method_decorator(admin_required, name='dispatch')
+class ProductStatsAPI(APIView):
+    def get(self, request):
+        """Get product statistics for the dashboard"""
+        try:
+            # Total products
+            total_products = Product.objects.count()
+
+            # Published products
+            published_products = Product.objects.filter(
+                status='published').count()
+
+            # Low stock products (quantity <= low_stock_threshold)
+            low_stock_products = Product.objects.filter(
+                quantity__lte=10,  # Default low stock threshold
+                track_quantity=True
+            ).count()
+
+            # Out of stock products
+            out_of_stock_products = Product.objects.filter(
+                quantity=0,
+                track_quantity=True
+            ).count()
+
+            # Total categories and brands
+            total_categories = Category.objects.count()
+            total_brands = Brand.objects.count()
+
+            return Response({
+                'total_products': total_products,
+                'published_products': published_products,
+                'low_stock_products': low_stock_products,
+                'out_of_stock_products': out_of_stock_products,
+                'total_categories': total_categories,
+                'total_brands': total_brands
+            })
+        except Exception as e:
+            print(f"DEBUG: Error in ProductStatsAPI: {str(e)}")
+            return Response({'error': str(e)}, status=500)
+
+
+@method_decorator(admin_required, name='dispatch')
+class ProductDetailAPI(APIView):
+    def get(self, request, product_id):
+        """Get detailed product information"""
+        try:
+            product = Product.objects.select_related('category', 'brand').prefetch_related(
+                'images', 'variants', 'order_items'
+            ).get(id=product_id)
+
+            serializer = ProductDetailSerializer(product)
+            return Response(serializer.data)
+        except Product.DoesNotExist:
+            return Response({'error': 'Product not found'}, status=404)
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+
+@method_decorator(admin_required, name='dispatch')
+class EnhancedProductManagementAPI(APIView):
+    def get(self, request):
+        """Enhanced product listing with advanced filtering"""
+        try:
+            # Get filter parameters
+            search = request.GET.get('search', '')
+            category = request.GET.get('category', '')
+            brand = request.GET.get('brand', '')
+            status = request.GET.get('status', '')
+            stock = request.GET.get('stock', '')
+            price = request.GET.get('price', '')
+            sort = request.GET.get('sort', 'newest')
+            page = int(request.GET.get('page', 1))
+            page_size = 20
+
+            # Build queryset
+            queryset = Product.objects.select_related(
+                'category', 'brand').prefetch_related('images')
+
+            # Apply filters
+            if search:
+                queryset = queryset.filter(
+                    Q(name__icontains=search) |
+                    Q(sku__icontains=search) |
+                    Q(description__icontains=search)
+                )
+
+            if category:
+                queryset = queryset.filter(category_id=category)
+
+            if brand:
+                queryset = queryset.filter(brand_id=brand)
+
+            if status:
+                queryset = queryset.filter(status=status)
+
+            if stock:
+                if stock == 'in_stock':
+                    queryset = queryset.filter(quantity__gt=0)
+                elif stock == 'low_stock':
+                    queryset = queryset.filter(
+                        quantity__lte=models.F('low_stock_threshold'),
+                        quantity__gt=0
+                    )
+                elif stock == 'out_of_stock':
+                    queryset = queryset.filter(quantity=0)
+
+            if price:
+                if price == '0-50':
+                    queryset = queryset.filter(price__range=(0, 50))
+                elif price == '50-100':
+                    queryset = queryset.filter(price__range=(50, 100))
+                elif price == '100-500':
+                    queryset = queryset.filter(price__range=(100, 500))
+                elif price == '500+':
+                    queryset = queryset.filter(price__gte=500)
+
+            # Apply sorting
+            if sort == 'newest':
+                queryset = queryset.order_by('-created_at')
+            elif sort == 'oldest':
+                queryset = queryset.order_by('created_at')
+            elif sort == 'name_asc':
+                queryset = queryset.order_by('name')
+            elif sort == 'name_desc':
+                queryset = queryset.order_by('-name')
+            elif sort == 'price_asc':
+                queryset = queryset.order_by('price')
+            elif sort == 'price_desc':
+                queryset = queryset.order_by('-price')
+            elif sort == 'stock_asc':
+                queryset = queryset.order_by('quantity')
+            elif sort == 'stock_desc':
+                queryset = queryset.order_by('-quantity')
+
+            # Pagination
+            total_count = queryset.count()
+            start_idx = (page - 1) * page_size
+            products = queryset[start_idx:start_idx + page_size]
+
+            serializer = EnhancedProductManagementSerializer(
+                products, many=True)
+
+            return Response({
+                'products': serializer.data,
+                'pagination': {
+                    'page': page,
+                    'page_size': page_size,
+                    'total_count': total_count,
+                    'total_pages': (total_count + page_size - 1) // page_size
+                }
+            })
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+
+@method_decorator(admin_required, name='dispatch')
+class BulkProductActionsAPI(APIView):
+    def post(self, request):
+        """Handle bulk product actions (publish, unpublish, delete, etc.)"""
+        try:
+            action = request.data.get('action')
+            product_ids = request.data.get('product_ids', [])
+
+            if not product_ids:
+                return Response({'error': 'No products selected'}, status=400)
+
+            products = Product.objects.filter(id__in=product_ids)
+
+            if action == 'publish':
+                products.update(status='published')
+                message = f'{products.count()} products published successfully'
+            elif action == 'unpublish':
+                products.update(status='draft')
+                message = f'{products.count()} products unpublished successfully'
+            elif action == 'delete':
+                count = products.count()
+                products.delete()
+                message = f'{count} products deleted successfully'
+            elif action == 'feature':
+                products.update(is_featured=True)
+                message = f'{products.count()} products featured successfully'
+            elif action == 'unfeature':
+                products.update(is_featured=False)
+                message = f'{products.count()} products unfeatured successfully'
+            else:
+                return Response({'error': 'Invalid action'}, status=400)
+
+            return Response({'success': True, 'message': message})
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+
+@admin_required
+def export_products_csv(request):
+    """Export products to CSV"""
+    try:
+        # Get filter parameters
+        search = request.GET.get('search', '')
+        category = request.GET.get('category', '')
+        brand = request.GET.get('brand', '')
+        status = request.GET.get('status', '')
+        stock = request.GET.get('stock', '')
+        price = request.GET.get('price', '')
+
+        # Build queryset
+        queryset = Product.objects.select_related('category', 'brand')
+
+        # Apply the same filters as the listing
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search) |
+                Q(sku__icontains=search)
+            )
+        if category:
+            queryset = queryset.filter(category_id=category)
+        if brand:
+            queryset = queryset.filter(brand_id=brand)
+        if status:
+            queryset = queryset.filter(status=status)
+        if stock:
+            if stock == 'in_stock':
+                queryset = queryset.filter(quantity__gt=0)
+            elif stock == 'low_stock':
+                queryset = queryset.filter(
+                    quantity__lte=models.F('low_stock_threshold'),
+                    quantity__gt=0
+                )
+            elif stock == 'out_of_stock':
+                queryset = queryset.filter(quantity=0)
+        if price:
+            if price == '0-50':
+                queryset = queryset.filter(price__range=(0, 50))
+            elif price == '50-100':
+                queryset = queryset.filter(price__range=(50, 100))
+            elif price == '100-500':
+                queryset = queryset.filter(price__range=(100, 500))
+            elif price == '500+':
+                queryset = queryset.filter(price__gte=500)
+
+        # Create HTTP response with CSV header
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="products_export.csv"'
+
+        # Create CSV writer
+        writer = csv.writer(response)
+        writer.writerow([
+            'ID', 'Name', 'SKU', 'Category', 'Brand', 'Price',
+            'Compare Price', 'Cost Price', 'Quantity', 'Low Stock Threshold',
+            'Status', 'Featured', 'Digital', 'Description', 'Created At', 'Updated At'
+        ])
+
+        # Write product data
+        for product in queryset:
+            writer.writerow([
+                product.id,
+                product.name,
+                product.sku,
+                product.category.name if product.category else '',
+                product.brand.name if product.brand else '',
+                float(product.price),
+                float(product.compare_price) if product.compare_price else '',
+                float(product.cost_per_item) if product.cost_per_item else '',
+                product.quantity,
+                product.low_stock_threshold,
+                product.status,
+                'Yes' if product.is_featured else 'No',
+                'Yes' if product.is_digital else 'No',
+                product.description.replace('\n', ' ').replace(
+                    '\r', ' ')[:100],  # Truncate long descriptions
+                product.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                product.updated_at.strftime(
+                    '%Y-%m-%d %H:%M:%S') if product.updated_at else ''
+            ])
+
+        return response
+
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@admin_required
+def quick_edit_product(request, product_id):
+    """Handle quick edits to product fields"""
+    try:
+        product = Product.objects.get(id=product_id)
+
+        if request.method == 'POST':
+            import json
+            data = json.loads(request.body)
+
+            # Update allowed fields
+            allowed_fields = ['name', 'price', 'compare_price',
+                              'quantity', 'status', 'is_featured']
+            for field in allowed_fields:
+                if field in data:
+                    # Handle different data types
+                    if field in ['price', 'compare_price']:
+                        setattr(product, field, float(
+                            data[field]) if data[field] else None)
+                    elif field == 'quantity':
+                        setattr(product, field, int(data[field]))
+                    elif field == 'is_featured':
+                        setattr(product, field, bool(data[field]))
+                    else:
+                        setattr(product, field, data[field])
+
+            product.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Product updated successfully',
+                'product': {
+                    'id': product.id,
+                    'name': product.name,
+                    'price': float(product.price),
+                    'quantity': product.quantity,
+                    'status': product.status,
+                    'is_featured': product.is_featured
+                }
+            })
+
+    except Product.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Product not found'}, status=404)
+    except Exception as e:
+        print(f"DEBUG: Error in quick_edit_product: {str(e)}")
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@admin_required
+def update_product_inventory(request, product_id):
+    """Update product inventory with enhanced functionality"""
+    try:
+        product = Product.objects.get(id=product_id)
+
+        if request.method == 'POST':
+            data = json.loads(request.body)
+
+            # Handle status updates
+            if data.get('action') == 'update_status':
+                new_status = data.get('status')
+                if new_status in ['draft', 'published', 'archived']:
+                    product.status = new_status
+                    product.save()
+                    return JsonResponse({'success': True, 'message': 'Product status updated'})
+
+            # Handle quantity updates
+            new_quantity = data.get('quantity')
+            if new_quantity is not None:
+                try:
+                    quantity = int(new_quantity)
+                    if quantity >= 0:
+                        old_quantity = product.quantity
+                        product.quantity = quantity
+                        product.save()
+
+                        # Record inventory history if quantity changed
+                        if old_quantity != quantity:
+                            from products.models import InventoryHistory
+                            InventoryHistory.objects.create(
+                                product=product,
+                                action='adjustment',
+                                quantity_change=quantity - old_quantity,
+                                new_quantity=quantity,
+                                note='Inventory adjusted by admin',
+                                created_by=request.user
+                            )
+
+                        return JsonResponse({'success': True, 'message': 'Inventory updated'})
+                except ValueError:
+                    return JsonResponse({'success': False, 'message': 'Invalid quantity'}, status=400)
+
+            # Handle featured status
+            if 'is_featured' in data:
+                product.is_featured = data['is_featured']
+                product.save()
+                return JsonResponse({'success': True, 'message': 'Featured status updated'})
+
+        return JsonResponse({'success': False, 'message': 'Invalid request'}, status=400)
+
+    except Product.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Product not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# new
+
+
+# Add these API views to your views.py
+
+@method_decorator(admin_required, name='dispatch')
+class UserStatsAPI(APIView):
+    def get(self, request):
+        """Get user statistics for the dashboard"""
+        try:
+            # Total users
+            total_users = User.objects.count()
+
+            # Pending verification
+            pending_verification = User.objects.filter(
+                email_verified=False).count()
+
+            # Active today (users who logged in today)
+            today = timezone.now().date()
+            active_today = User.objects.filter(
+                last_login__date=today
+            ).count()
+
+            # Seller count
+            seller_count = User.objects.filter(role='seller').count()
+
+            # New users this week
+            week_ago = timezone.now() - timedelta(days=7)
+            new_users_week = User.objects.filter(
+                date_joined__gte=week_ago).count()
+
+            return Response({
+                'total_users': total_users,
+                'pending_verification': pending_verification,
+                'active_today': active_today,
+                'seller_count': seller_count,
+                'new_users_week': new_users_week
+            })
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+
+@method_decorator(admin_required, name='dispatch')
+class UserDetailAPI(APIView):
+    def get(self, request, user_id):
+        """Get detailed user information"""
+        try:
+            user = User.objects.get(id=user_id)
+            serializer = UserDetailSerializer(user)
+            return Response(serializer.data)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=404)
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+
+@method_decorator(admin_required, name='dispatch')
+class BulkUserActionsAPI(APIView):
+    def post(self, request):
+        """Handle bulk user actions (verify, activate, deactivate)"""
+        try:
+            action = request.data.get('action')
+            user_ids = request.data.get('user_ids', [])
+
+            if not user_ids:
+                return Response({'error': 'No users selected'}, status=400)
+
+            users = User.objects.filter(id__in=user_ids)
+
+            if action == 'verify':
+                users.update(email_verified=True)
+                message = f'{users.count()} users verified successfully'
+            elif action == 'activate':
+                users.update(is_active=True)
+                message = f'{users.count()} users activated successfully'
+            elif action == 'deactivate':
+                users.update(is_active=False)
+                message = f'{users.count()} users deactivated successfully'
+            else:
+                return Response({'error': 'Invalid action'}, status=400)
+
+            return Response({'success': True, 'message': message})
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+
+@admin_required
+def export_users_csv(request):
+    """Export users to CSV"""
+    try:
+        # Get filter parameters
+        role_filter = request.GET.get('role', '')
+        verification_filter = request.GET.get('verification', '')
+        status_filter = request.GET.get('status', '')
+        date_from = request.GET.get('date_from', '')
+        date_to = request.GET.get('date_to', '')
+
+        # Build queryset
+        queryset = User.objects.all()
+
+        if role_filter:
+            queryset = queryset.filter(role=role_filter)
+        if verification_filter == 'pending':
+            queryset = queryset.filter(email_verified=False)
+        elif verification_filter == 'verified':
+            queryset = queryset.filter(email_verified=True)
+        if status_filter == 'active':
+            queryset = queryset.filter(is_active=True)
+        elif status_filter == 'inactive':
+            queryset = queryset.filter(is_active=False)
+        if date_from:
+            queryset = queryset.filter(date_joined__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(date_joined__lte=date_to)
+
+        # Create HTTP response with CSV header
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="users_export.csv"'
+
+        # Create CSV writer
+        writer = csv.writer(response)
+        writer.writerow([
+            'ID', 'Email', 'First Name', 'Last Name', 'Username', 'Role',
+            'Email Verified', 'Account Active', 'Date Joined', 'Last Login',
+            'Order Count', 'Total Spent'
+        ])
+
+        # Write user data
+        for user in queryset:
+            # Calculate order count and total spent
+            order_count = user.orders.count()
+            total_spent = user.orders.filter(payment_status='paid').aggregate(
+                total=Sum('grand_total')
+            )['total'] or 0
+
+            writer.writerow([
+                user.id,
+                user.email,
+                user.first_name or '',
+                user.last_name or '',
+                user.username,
+                user.role,
+                'Yes' if user.email_verified else 'No',
+                'Yes' if user.is_active else 'No',
+                user.date_joined.strftime('%Y-%m-%d %H:%M:%S'),
+                user.last_login.strftime(
+                    '%Y-%m-%d %H:%M:%S') if user.last_login else 'Never',
+                order_count,
+                float(total_spent)
+            ])
+
+        return response
+
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
 
 # API Views
 
@@ -251,19 +869,25 @@ class ProductAnalyticsAPI(APIView):
 
 @admin_required
 def verify_user(request, user_id):
-    user = get_object_or_404(User, id=user_id)
-    user.email_verified = True
-    user.save()
+    """Verify a user's email"""
+    try:
+        user = User.objects.get(id=user_id)
+        user.email_verified = True
+        user.save()
 
-    # Create notification
-    AdminNotification.objects.create(
-        title='User Verified',
-        message=f'User {user.email} has been verified',
-        notification_type='user',
-        related_object_id=user_id
-    )
+        # Create notification
+        AdminNotification.objects.create(
+            title='User Verified',
+            message=f'User {user.email} has been verified',
+            notification_type='user',
+            related_object_id=user_id
+        )
 
-    return Response({'success': True, 'message': 'User verified successfully'})
+        return JsonResponse({'success': True, 'message': 'User verified successfully'})
+    except User.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'User not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 
 @admin_required
@@ -326,37 +950,38 @@ def update_inventory(request, product_id):
 class UserManagementAPI(APIView):
     def get(self, request):
         try:
-            print("DEBUG: UserManagementAPI called")
             role_filter = request.GET.get('role', '')
             verification_filter = request.GET.get('verification', '')
+            status_filter = request.GET.get('status', '')
+            date_from = request.GET.get('date_from', '')
+            date_to = request.GET.get('date_to', '')
             page = int(request.GET.get('page', 1))
             page_size = 20
 
             queryset = User.objects.all()
-            print(f"DEBUG: Initial queryset count: {queryset.count()}")
 
+            # Apply filters
             if role_filter:
                 queryset = queryset.filter(role=role_filter)
-                print(f"DEBUG: After role filter: {queryset.count()}")
             if verification_filter == 'pending':
                 queryset = queryset.filter(email_verified=False)
-                print(f"DEBUG: After pending filter: {queryset.count()}")
             elif verification_filter == 'verified':
                 queryset = queryset.filter(email_verified=True)
-                print(f"DEBUG: After verified filter: {queryset.count()}")
+            if status_filter == 'active':
+                queryset = queryset.filter(is_active=True)
+            elif status_filter == 'inactive':
+                queryset = queryset.filter(is_active=False)
+            if date_from:
+                queryset = queryset.filter(date_joined__gte=date_from)
+            if date_to:
+                queryset = queryset.filter(date_joined__lte=date_to)
 
             total_count = queryset.count()
             start_idx = (page - 1) * page_size
             users = queryset.order_by(
                 '-date_joined')[start_idx:start_idx + page_size]
-            print(f"DEBUG: Final users count: {len(users)}")
-
-            # Check if serializer exists
-            from .serializers import UserManagementSerializer
-            print("DEBUG: User serializer imported successfully")
 
             serializer = UserManagementSerializer(users, many=True)
-            print("DEBUG: User serialization successful")
 
             return Response({
                 'users': serializer.data,
@@ -368,8 +993,6 @@ class UserManagementAPI(APIView):
                 }
             })
         except Exception as e:
-            print(f"DEBUG: Error in UserManagementAPI: {str(e)}")
-            print(traceback.format_exc())
             return Response({'error': str(e)}, status=500)
 
 
@@ -455,3 +1078,17 @@ class OrderDetailAPI(APIView):
             return Response(serializer.data)
         except Order.DoesNotExist:
             return Response({'error': 'Order not found'}, status=404)
+
+
+class CategoryListAPI(APIView):
+    def get(self, request):
+        categories = Category.objects.all()
+        serializer = CategorySerializer(categories, many=True)
+        return Response(serializer.data)
+
+
+class BrandListAPI(APIView):
+    def get(self, request):
+        brands = Brand.objects.all()
+        serializer = BrandSerializer(brands, many=True)
+        return Response(serializer.data)

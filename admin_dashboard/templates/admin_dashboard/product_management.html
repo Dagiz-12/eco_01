@@ -11,147 +11,264 @@
             <p class="text-gray-600">Manage product catalog, inventory, and categories</p>
         </div>
         <div class="flex space-x-3">
-            <button onclick="showAddProductForm()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+            <button onclick="showImportModal()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                <i class="fas fa-upload mr-2"></i>Import CSV
+            </button>
+            <button onclick="exportProducts()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                <i class="fas fa-download mr-2"></i>Export CSV
+            </button>
+            <button onclick="showAddProductForm()" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
                 <i class="fas fa-plus mr-2"></i>Add Product
             </button>
         </div>
     </div>
 </div>
 
-<!-- Products Grid -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="products-grid">
-    <!-- Products will be loaded here -->
+<!-- Product Stats -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600">Total Products</p>
+                <p id="total-products" class="text-2xl font-bold text-gray-800">0</p>
+            </div>
+            <div class="p-3 bg-blue-100 rounded-lg">
+                <i class="fas fa-cube text-blue-600 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600">Published</p>
+                <p id="published-products" class="text-2xl font-bold text-gray-800">0</p>
+            </div>
+            <div class="p-3 bg-green-100 rounded-lg">
+                <i class="fas fa-check-circle text-green-600 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600">Low Stock</p>
+                <p id="low-stock-products" class="text-2xl font-bold text-gray-800">0</p>
+            </div>
+            <div class="p-3 bg-red-100 rounded-lg">
+                <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600">Out of Stock</p>
+                <p id="out-of-stock-products" class="text-2xl font-bold text-gray-800">0</p>
+            </div>
+            <div class="p-3 bg-yellow-100 rounded-lg">
+                <i class="fas fa-times-circle text-yellow-600 text-xl"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters and Bulk Actions -->
+<div class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+        <div class="flex flex-wrap gap-4">
+            <!-- Search -->
+            <div class="relative">
+                <input type="text" id="search-input" placeholder="Search products..." 
+                       class="border rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 w-64">
+                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+            </div>
+            
+            <!-- Category Filter -->
+            <select id="category-filter" class="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">All Categories</option>
+                <!-- Categories will be loaded dynamically -->
+            </select>
+            
+            <!-- Brand Filter -->
+            <select id="brand-filter" class="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">All Brands</option>
+                <!-- Brands will be loaded dynamically -->
+            </select>
+            
+            <!-- Status Filter -->
+            <select id="status-filter" class="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">All Status</option>
+                <option value="published">Published</option>
+                <option value="draft">Draft</option>
+                <option value="archived">Archived</option>
+            </select>
+            
+            <!-- Stock Filter -->
+            <select id="stock-filter" class="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">All Stock</option>
+                <option value="in_stock">In Stock</option>
+                <option value="low_stock">Low Stock</option>
+                <option value="out_of_stock">Out of Stock</option>
+            </select>
+
+            <!-- Price Range -->
+            <select id="price-filter" class="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">All Prices</option>
+                <option value="0-50">$0 - $50</option>
+                <option value="50-100">$50 - $100</option>
+                <option value="100-500">$100 - $500</option>
+                <option value="500+">$500+</option>
+            </select>
+        </div>
+        
+        <div class="flex space-x-3" id="bulk-actions" style="display: none;">
+            <button onclick="bulkPublishProducts()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                <i class="fas fa-check-circle mr-2"></i>Publish Selected
+            </button>
+            <button onclick="bulkUnpublishProducts()" class="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors">
+                <i class="fas fa-times-circle mr-2"></i>Unpublish Selected
+            </button>
+            <button onclick="bulkDeleteProducts()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                <i class="fas fa-trash mr-2"></i>Delete Selected
+            </button>
+        </div>
+    </div>
+
+    <!-- Active Filters Display -->
+    <div id="active-filters" class="mt-4 flex flex-wrap gap-2 hidden">
+        <!-- Active filters will be displayed here -->
+    </div>
+</div>
+
+<!-- Products Grid/Table View Toggle -->
+<div class="flex justify-between items-center mb-4">
+    <div class="flex space-x-2">
+        <button id="grid-view-btn" onclick="switchView('grid')" class="px-4 py-2 bg-blue-600 text-white rounded-lg">
+            <i class="fas fa-th-large mr-2"></i>Grid View
+        </button>
+        <button id="table-view-btn" onclick="switchView('table')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+            <i class="fas fa-table mr-2"></i>Table View
+        </button>
+    </div>
+    
+    <div class="flex items-center space-x-4">
+        <span class="text-sm text-gray-600" id="results-count">Loading...</span>
+        <select id="sort-by" class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="name_asc">Name A-Z</option>
+            <option value="name_desc">Name Z-A</option>
+            <option value="price_asc">Price Low-High</option>
+            <option value="price_desc">Price High-Low</option>
+            <option value="stock_asc">Stock Low-High</option>
+            <option value="stock_desc">Stock High-Low</option>
+        </select>
+    </div>
+</div>
+
+<!-- Products Grid View -->
+<div id="products-grid-view" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <!-- Products will be loaded here in grid view -->
+</div>
+
+<!-- Products Table View -->
+<div id="products-table-view" class="bg-white rounded-lg shadow-md overflow-hidden hidden">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <input type="checkbox" id="select-all-products" onchange="toggleSelectAllProducts()">
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brand</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sales</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="products-table-body" class="bg-white divide-y divide-gray-200">
+                <!-- Products will be loaded here in table view -->
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    <div id="pagination" class="px-6 py-4 border-t border-gray-200">
+        <!-- Pagination will be loaded here -->
+    </div>
+</div>
+
+<!-- Product Detail Modal -->
+<div id="product-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b">
+            <div class="flex justify-between items-center">
+                <h3 class="text-xl font-semibold" id="modal-title">Product Details</h3>
+                <button onclick="closeProductModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+        <div id="product-modal-content" class="p-6">
+            <!-- Product details will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<!-- Quick Edit Modal -->
+<div id="quick-edit-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg w-full max-w-2xl">
+        <div class="p-6 border-b">
+            <div class="flex justify-between items-center">
+                <h3 class="text-xl font-semibold">Quick Edit Product</h3>
+                <button onclick="closeQuickEditModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+        <div id="quick-edit-content" class="p-6">
+            <!-- Quick edit form will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<!-- Import Modal -->
+<div id="import-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg w-full max-w-2xl">
+        <div class="p-6 border-b">
+            <div class="flex justify-between items-center">
+                <h3 class="text-xl font-semibold">Import Products</h3>
+                <button onclick="closeImportModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Upload CSV File</label>
+                <input type="file" id="csv-file" accept=".csv" class="w-full border rounded-lg px-3 py-2">
+                <p class="text-sm text-gray-500 mt-1">Upload a CSV file with product data. <a href="#" class="text-blue-600">Download template</a></p>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeImportModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
+                <button onclick="importProducts()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Import</button>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/admin_products.js' %}"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        loadProducts();
-    });
-
-    async function loadProducts() {
-        try {
-            const response = await fetch('/admin-dashboard/api/products/');
-            if (response.ok) {
-                const products = await response.json();
-                renderProductsGrid(products);
-            
-            } else {
-                throw new Error('Failed to fetch products');
-            }
-        } catch (error) {
-            console.error('Failed to load products:', error);
-            showToast('Failed to load products: ' + error.message, 'error');
-        }
-    }
-
-    function renderProductsGrid(products) {
-        const container = document.getElementById('products-grid');
-        
-        if (!products || products.length === 0) {
-            container.innerHTML = `
-                <div class="col-span-3 text-center py-12">
-                    <i class="fas fa-cube text-4xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-600">No products found</p>
-                </div>
-            `;
-            return;
-        }
-
-        container.innerHTML = products.map(product => `
-            <div class="bg-white rounded-lg shadow-md overflow-hidden">
-                <div class="h-48 bg-gray-200 flex items-center justify-center">
-                     ${product.primary_image ? 
-                        `<img src="${product.primary_image}" alt="${product.name}" class="h-full w-full object-cover">` :
-                        `<i class="fas fa-image text-4xl text-gray-400"></i>`
-                    }
-                </div>
-                <div class="p-4">
-                    <h3 class="font-semibold text-lg mb-2">${product.name}</h3>
-                    <p class="text-gray-600 text-sm mb-2">${product.category_name || 'No category'}</p>
-                    <p class="text-green-600 font-semibold mb-3">$${product.price}</p>
-                    
-                    <div class="flex justify-between items-center mb-3">
-                         <span class="text-sm ${product.status === 'published' ? 'text-green-600' : 'text-red-600'}">
-                        ${product.status}
-                    </span>
-                        <span class="text-sm ${product.low_stock ? 'text-red-600' : 'text-gray-600'}">
-                            Stock: ${product.quantity || 0}
-                        </span>
-                    </div>
-                    
-                    <div class="flex space-x-2">
-                        <button onclick="toggleProductActive(${product.id}, '${product.status}')" 
-                               class="flex-1 ${product.status === 'published' ? 'bg-red-600' : 'bg-green-600'} text-white py-2 px-3 rounded text-sm">
-                        ${product.status === 'published' ? 'Unpublish' : 'Publish'}
-                        </button>
-                        <button onclick="updateInventory(${product.id})" 
-                                class="bg-blue-600 text-white py-2 px-3 rounded text-sm">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    // Update the toggle function to handle status instead of is_active
-async function toggleProductStatus(productId, currentStatus) {
-    const newStatus = currentStatus === 'published' ? 'draft' : 'published';
-    
-    try {
-        const response = await fetch(`/admin-dashboard/api/products/update-inventory/${productId}/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken()
-            },
-            body: JSON.stringify({
-                action: 'update_status',
-                status: newStatus
-            })
-        });
-        
-        if (response.ok) {
-            showToast(`Product ${newStatus === 'published' ? 'published' : 'unpublished'}`, 'success');
-            loadProducts();
-        }
-    } catch (error) {
-        console.error('Failed to toggle product status:', error);
-        showToast('Failed to update product status', 'error');
-    }
-}
-
-   // Update the inventory function
-async function updateInventory(productId) {
-    const newQuantity = prompt('Enter new inventory quantity:');
-    if (newQuantity && !isNaN(newQuantity)) {
-        try {
-            const response = await fetch(`/admin-dashboard/api/products/update-inventory/${productId}/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                body: JSON.stringify({
-                    quantity: parseInt(newQuantity)
-                })
-            });
-            
-            if (response.ok) {
-                showToast('Inventory updated successfully', 'success');
-                loadProducts();
-            }
-        } catch (error) {
-            console.error('Failed to update inventory:', error);
-            showToast('Failed to update inventory', 'error');
-        }
-    }
-}
-
-    function showAddProductForm() {
-        showToast('Add product feature coming soon!', 'info');
-    }
+    // Main products management JavaScript will be in admin_products.js
+    // This script tag will contain initialization and global functions
 </script>
 {% endblock %}
