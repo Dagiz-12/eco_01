@@ -44,6 +44,10 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
+
+    'tailwind',
+    'theme',
+
     # Local apps
     'users.apps.UsersConfig',
     'products',
@@ -57,7 +61,11 @@ INSTALLED_APPS = [
     'home',
     'admin_dashboard',
 
+
 ]
+
+
+TAILWIND_APP_NAME = "theme"
 
 # Custom User Model
 AUTH_USER_MODEL = 'users.User'

@@ -8,10 +8,10 @@
     <div class="flex justify-between items-center">
         <div>
             <h1 class="text-3xl font-bold text-gray-800">User Management</h1>
-            <p class="text-gray-600">Manage customers, sellers, and user verification</p>
+            <p class="text-gray-600">Manage user accounts, roles, and permissions</p>
         </div>
         <div class="flex space-x-3">
-            <button onclick="exportUsers()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+            <button onclick="exportUsers()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
                 <i class="fas fa-download mr-2"></i>Export CSV
             </button>
         </div>
@@ -39,7 +39,7 @@
                 <p id="pending-verification" class="text-2xl font-bold text-gray-800">0</p>
             </div>
             <div class="p-3 bg-yellow-100 rounded-lg">
-                <i class="fas fa-clock text-yellow-600 text-xl"></i>
+                <i class="fas fa-envelope text-yellow-600 text-xl"></i>
             </div>
         </div>
     </div>
@@ -73,24 +73,42 @@
 <div class="bg-white rounded-lg shadow-md p-6 mb-6">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
         <div class="flex flex-wrap gap-4">
+            <!-- Search -->
+            <div class="relative">
+                <input type="text" id="search-input" placeholder="Search users..." 
+                       class="border rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 w-64">
+                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+            </div>
+            
+            <!-- Role Filter -->
             <select id="role-filter" class="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">All Roles</option>
-                <option value="customer">Customers</option>
-                <option value="seller">Sellers</option>
-                <option value="admin">Admins</option>
+                <option value="customer">Customer</option>
+                <option value="seller">Seller</option>
+                <option value="admin">Admin</option>
             </select>
+            
+            <!-- Verification Filter -->
             <select id="verification-filter" class="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">All Users</option>
-                <option value="pending">Pending Verification</option>
-                <option value="verified">Verified Only</option>
+                <option value="">All Verification</option>
+                <option value="pending">Pending</option>
+                <option value="verified">Verified</option>
             </select>
+            
+            <!-- Status Filter -->
             <select id="status-filter" class="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">All Status</option>
-                <option value="active">Active Only</option>
-                <option value="inactive">Inactive Only</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
             </select>
-            <input type="date" id="date-from" class="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="From Date">
-            <input type="date" id="date-to" class="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="To Date">
+
+            <!-- Date Range -->
+            <div class="flex space-x-2">
+                <input type="date" id="date-from" placeholder="From Date" 
+                       class="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="date" id="date-to" placeholder="To Date" 
+                       class="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
         </div>
         
         <div class="flex space-x-3" id="bulk-actions" style="display: none;">
@@ -105,6 +123,11 @@
             </button>
         </div>
     </div>
+
+    <!-- Active Filters Display -->
+    <div id="active-filters" class="mt-4 flex flex-wrap gap-2 hidden">
+        <!-- Active filters will be displayed here -->
+    </div>
 </div>
 
 <!-- Users Table -->
@@ -114,15 +137,16 @@
             <thead class="bg-gray-50">
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <input type="checkbox" id="select-all" onchange="toggleSelectAll()">
+                        <input type="checkbox" id="select-all-users" onchange="toggleSelectAllUsers()">
                     </th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Active</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Verification</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Orders</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Spent</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
             </thead>
@@ -157,472 +181,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-    let currentPage = 1;
-    let currentRole = '';
-    let currentVerification = '';
-    let currentStatus = '';
-    let dateFrom = '';
-    let dateTo = '';
-    let selectedUsers = new Set();
-
-    document.addEventListener('DOMContentLoaded', function() {
-        loadUsers();
-        loadUserStats();
-        
-        // Event listeners for filters
-        document.getElementById('role-filter').addEventListener('change', function(e) {
-            currentRole = e.target.value;
-            currentPage = 1;
-            loadUsers();
-        });
-        
-        document.getElementById('verification-filter').addEventListener('change', function(e) {
-            currentVerification = e.target.value;
-            currentPage = 1;
-            loadUsers();
-        });
-        
-        document.getElementById('status-filter').addEventListener('change', function(e) {
-            currentStatus = e.target.value;
-            currentPage = 1;
-            loadUsers();
-        });
-        
-        document.getElementById('date-from').addEventListener('change', function(e) {
-            dateFrom = e.target.value;
-            currentPage = 1;
-            loadUsers();
-        });
-        
-        document.getElementById('date-to').addEventListener('change', function(e) {
-            dateTo = e.target.value;
-            currentPage = 1;
-            loadUsers();
-        });
-    });
-
-    async function loadUserStats() {
-        try {
-            const response = await fetch('/admin-dashboard/api/users/stats/');
-            if (response.ok) {
-                const stats = await response.json();
-                document.getElementById('total-users').textContent = stats.total_users;
-                document.getElementById('pending-verification').textContent = stats.pending_verification;
-                document.getElementById('active-today').textContent = stats.active_today;
-                document.getElementById('seller-count').textContent = stats.seller_count;
-            }
-        } catch (error) {
-            console.error('Failed to load user stats:', error);
-        }
-    }
-
-    async function loadUsers() {
-        try {
-            let url = `/admin-dashboard/api/users/?page=${currentPage}`;
-            if (currentRole) url += `&role=${currentRole}`;
-            if (currentVerification) url += `&verification=${currentVerification}`;
-            if (currentStatus) url += `&status=${currentStatus}`;
-            if (dateFrom) url += `&date_from=${dateFrom}`;
-            if (dateTo) url += `&date_to=${dateTo}`;
-            
-            const response = await fetch(url);
-            if (response.ok) {
-                const data = await response.json();
-                renderUsersTable(data);
-            }
-        } catch (error) {
-            console.error('Failed to load users:', error);
-            showToast('Failed to load users', 'error');
-        }
-    }
-
-    function renderUsersTable(data) {
-        const tbody = document.getElementById('users-table-body');
-        const pagination = document.getElementById('pagination');
-        
-        if (!data.users || data.users.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="9" class="px-6 py-8 text-center text-gray-500">
-                        <i class="fas fa-users text-4xl text-gray-300 mb-4"></i>
-                        <p class="text-lg">No users found</p>
-                    </td>
-                </tr>
-            `;
-            pagination.innerHTML = '';
-            return;
-        }
-
-        tbody.innerHTML = data.users.map(user => `
-            <tr class="hover:bg-gray-50" id="user-row-${user.id}">
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <input type="checkbox" value="${user.id}" onchange="toggleUserSelection(${user.id})" class="user-checkbox">
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0 h-10 w-10 bg-gray-300 rounded-full flex items-center justify-center">
-                            <span class="text-gray-600 font-medium">${user.email.charAt(0).toUpperCase()}</span>
-                        </div>
-                        <div class="ml-4">
-                            <div class="text-sm font-medium text-gray-900">${user.email}</div>
-                            <div class="text-sm text-gray-500">${user.first_name} ${user.last_name}</div>
-                        </div>
-                    </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full capitalize ${
-                        user.role === 'admin' ? 'bg-red-100 text-red-800' :
-                        user.role === 'seller' ? 'bg-purple-100 text-purple-800' :
-                        'bg-blue-100 text-blue-800'
-                    }">
-                        ${user.role}
-                    </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${new Date(user.date_joined).toLocaleDateString()}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${user.order_count || 0}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    $${(user.total_spent || 0).toFixed(2)}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        user.email_verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                    }">
-                        ${user.email_verified ? 'Verified' : 'Pending'}
-                    </span>
-                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ml-2 ${
-                        user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }">
-                        ${user.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button onclick="viewUserDetails(${user.id})" class="text-blue-600 hover:text-blue-900 mr-3" title="View Details">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    ${!user.email_verified ? `
-                        <button onclick="verifyUser(${user.id})" class="text-green-600 hover:text-green-900 mr-3" title="Verify User">
-                            <i class="fas fa-check-circle"></i>
-                        </button>
-                    ` : ''}
-                    <button onclick="toggleUserActive(${user.id}, ${user.is_active})" class="${
-                        user.is_active ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'
-                    }" title="${user.is_active ? 'Deactivate' : 'Activate'}">
-                        <i class="fas ${user.is_active ? 'fa-user-slash' : 'fa-user-check'}"></i>
-                    </button>
-                </td>
-            </tr>
-        `).join('');
-        
-        // Render pagination
-        if (data.pagination) {
-            renderPagination(pagination, data.pagination);
-        }
-    }
-
-    function renderPagination(container, pagination) {
-        if (!pagination) return;
-        
-        const totalPages = pagination.total_pages;
-        container.innerHTML = `
-            <div class="flex items-center justify-between">
-                <div class="text-sm text-gray-700">
-                    Showing ${((pagination.page - 1) * pagination.page_size) + 1} to ${Math.min(pagination.page * pagination.page_size, pagination.total_count)} of ${pagination.total_count} users
-                </div>
-                <div class="flex space-x-2">
-                    ${pagination.page > 1 ? `
-                        <button onclick="goToPage(${pagination.page - 1})" class="px-3 py-1 border rounded hover:bg-gray-50">
-                            Previous
-                        </button>
-                    ` : ''}
-                    
-                    ${Array.from({length: Math.min(5, totalPages)}, (_, i) => {
-                        const pageNum = i + 1;
-                        return `
-                            <button onclick="goToPage(${pageNum})" 
-                                    class="px-3 py-1 border rounded ${
-                                        pageNum === pagination.page ? 'bg-blue-600 text-white' : 'hover:bg-gray-50'
-                                    }">
-                                ${pageNum}
-                            </button>
-                        `;
-                    }).join('')}
-                    
-                    ${pagination.page < totalPages ? `
-                        <button onclick="goToPage(${pagination.page + 1})" class="px-3 py-1 border rounded hover:bg-gray-50">
-                            Next
-                        </button>
-                    ` : ''}
-                </div>
-            </div>
-        `;
-    }
-
-    function goToPage(page) {
-        currentPage = page;
-        loadUsers();
-    }
-
-    // Selection functions
-    function toggleSelectAll() {
-        const selectAll = document.getElementById('select-all');
-        const checkboxes = document.querySelectorAll('.user-checkbox');
-        
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = selectAll.checked;
-            if (selectAll.checked) {
-                selectedUsers.add(parseInt(checkbox.value));
-            } else {
-                selectedUsers.delete(parseInt(checkbox.value));
-            }
-        });
-        
-        updateBulkActions();
-    }
-
-    function toggleUserSelection(userId) {
-        const checkbox = document.querySelector(`.user-checkbox[value="${userId}"]`);
-        if (checkbox.checked) {
-            selectedUsers.add(userId);
-        } else {
-            selectedUsers.delete(userId);
-            document.getElementById('select-all').checked = false;
-        }
-        updateBulkActions();
-    }
-
-    function updateBulkActions() {
-        const bulkActions = document.getElementById('bulk-actions');
-        if (selectedUsers.size > 0) {
-            bulkActions.style.display = 'flex';
-        } else {
-            bulkActions.style.display = 'none';
-        }
-    }
-
-    // Bulk actions
-    async function bulkVerifyUsers() {
-        if (selectedUsers.size === 0) return;
-        
-        if (!confirm(`Verify ${selectedUsers.size} user(s)?`)) return;
-        
-        try {
-            const response = await fetch('/admin-dashboard/api/users/bulk-verify/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                body: JSON.stringify({
-                    user_ids: Array.from(selectedUsers)
-                })
-            });
-            
-            if (response.ok) {
-                showToast(`${selectedUsers.size} user(s) verified successfully`, 'success');
-                selectedUsers.clear();
-                updateBulkActions();
-                loadUsers();
-            }
-        } catch (error) {
-            console.error('Failed to bulk verify users:', error);
-            showToast('Failed to verify users', 'error');
-        }
-    }
-
-    async function bulkActivateUsers() {
-        if (selectedUsers.size === 0) return;
-        
-        if (!confirm(`Activate ${selectedUsers.size} user(s)?`)) return;
-        
-        try {
-            const response = await fetch('/admin-dashboard/api/users/bulk-activate/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                body: JSON.stringify({
-                    user_ids: Array.from(selectedUsers)
-                })
-            });
-            
-            if (response.ok) {
-                showToast(`${selectedUsers.size} user(s) activated successfully`, 'success');
-                selectedUsers.clear();
-                updateBulkActions();
-                loadUsers();
-            }
-        } catch (error) {
-            console.error('Failed to bulk activate users:', error);
-            showToast('Failed to activate users', 'error');
-        }
-    }
-
-    async function bulkDeactivateUsers() {
-        if (selectedUsers.size === 0) return;
-        
-        if (!confirm(`Deactivate ${selectedUsers.size} user(s)?`)) return;
-        
-        try {
-            const response = await fetch('/admin-dashboard/api/users/bulk-deactivate/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                body: JSON.stringify({
-                    user_ids: Array.from(selectedUsers)
-                })
-            });
-            
-            if (response.ok) {
-                showToast(`${selectedUsers.size} user(s) deactivated successfully`, 'success');
-                selectedUsers.clear();
-                updateBulkActions();
-                loadUsers();
-            }
-        } catch (error) {
-            console.error('Failed to bulk deactivate users:', error);
-            showToast('Failed to deactivate users', 'error');
-        }
-    }
-
-    // Existing single user functions
-    async function verifyUser(userId) {
-        try {
-            const response = await fetch(`/admin-dashboard/api/users/verify/${userId}/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCSRFToken()
-                }
-            });
-            
-            if (response.ok) {
-                showToast('User verified successfully', 'success');
-                loadUsers();
-            } else {
-                showToast('Failed to verify user', 'error');
-            }
-        } catch (error) {
-            console.error('Failed to verify user:', error);
-            showToast('Failed to verify user', 'error');
-        }
-    }
-
-    async function toggleUserActive(userId, isCurrentlyActive) {
-        const action = isCurrentlyActive ? 'deactivate' : 'activate';
-        if (!confirm(`Are you sure you want to ${action} this user?`)) {
-            return;
-        }
-
-        try {
-            const response = await fetch(`/admin-dashboard/api/users/${userId}/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                body: JSON.stringify({
-                    action: 'toggle_active'
-                })
-            });
-            
-            if (response.ok) {
-                showToast(`User ${action}d successfully`, 'success');
-                loadUsers();
-            } else {
-                showToast(`Failed to ${action} user`, 'error');
-            }
-        } catch (error) {
-            console.error(`Failed to ${action} user:`, error);
-            showToast(`Failed to ${action} user`, 'error');
-        }
-    }
-
-    async function viewUserDetails(userId) {
-        try {
-            const response = await fetch(`/admin-dashboard/api/users/${userId}/`);
-            if (response.ok) {
-                const user = await response.json();
-                showUserModal(user);
-            }
-        } catch (error) {
-            console.error('Failed to load user details:', error);
-            showToast('Failed to load user details', 'error');
-        }
-    }
-
-    function showUserModal(user) {
-        document.getElementById('modal-title').textContent = `User: ${user.email}`;
-        document.getElementById('user-modal-content').innerHTML = `
-            <div class="space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <h4 class="font-semibold mb-3">Basic Information</h4>
-                        <div class="space-y-2">
-                            <p><strong>Email:</strong> ${user.email}</p>
-                            <p><strong>Name:</strong> ${user.first_name} ${user.last_name}</p>
-                            <p><strong>Username:</strong> ${user.username}</p>
-                            <p><strong>Role:</strong> <span class="capitalize">${user.role}</span></p>
-                            <p><strong>Joined:</strong> ${new Date(user.date_joined).toLocaleString()}</p>
-                            <p><strong>Last Login:</strong> ${user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}</p>
-                        </div>
-                    </div>
-                    <div>
-                        <h4 class="font-semibold mb-3">Account Status</h4>
-                        <div class="space-y-2">
-                            <p><strong>Email Verified:</strong> <span class="${user.email_verified ? 'text-green-600' : 'text-yellow-600'}">${user.email_verified ? 'Yes' : 'No'}</span></p>
-                            <p><strong>Account Active:</strong> <span class="${user.is_active ? 'text-green-600' : 'text-red-600'}">${user.is_active ? 'Yes' : 'No'}</span></p>
-                            <p><strong>Total Orders:</strong> ${user.order_count || 0}</p>
-                            <p><strong>Total Spent:</strong> $${(user.total_spent || 0).toFixed(2)}</p>
-                        </div>
-                    </div>
-                </div>
-                
-                ${user.addresses && user.addresses.length > 0 ? `
-                    <div>
-                        <h4 class="font-semibold mb-3">Addresses</h4>
-                        <div class="space-y-3">
-                            ${user.addresses.map(address => `
-                                <div class="border rounded-lg p-3">
-                                    <p><strong>${address.address_type.toUpperCase()}:</strong> ${address.street}, ${address.city}, ${address.state}, ${address.country}</p>
-                                    <p class="text-sm text-gray-600">${address.is_default ? 'Default Address' : ''}</p>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-            </div>
-        `;
-        document.getElementById('user-modal').classList.remove('hidden');
-    }
-
-    function closeUserModal() {
-        document.getElementById('user-modal').classList.add('hidden');
-    }
-
-    function exportUsers() {
-        let url = '/admin-dashboard/api/users/export/';
-        if (currentRole) url += `?role=${currentRole}`;
-        if (currentVerification) url += `${currentRole ? '&' : '?'}verification=${currentVerification}`;
-        
-        // Create a temporary link to trigger download
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'users.csv';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        showToast('Export started...', 'info');
-    }
-</script>
+<script src="{% static 'js/admin_users.js' %}"></script>
 {% endblock %}

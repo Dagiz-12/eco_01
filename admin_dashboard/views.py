@@ -892,26 +892,45 @@ def verify_user(request, user_id):
 
 @admin_required
 def update_order_status(request, order_id):
-    order = get_object_or_404(Order, id=order_id)
-    new_status = request.POST.get('status')
+    """Update order status with proper error handling"""
+    try:
+        order = get_object_or_404(Order, id=order_id)
 
-    if new_status in dict(Order.STATUS_CHOICES):
-        old_status = order.status
-        order.status = new_status
-        order.save()
+        if request.method == 'POST':
+            import json
+            data = json.loads(request.body)
+            new_status = data.get('status')
+            notes = data.get('notes', '')
 
-        # Record status history
-        OrderStatusHistory.objects.create(
-            order=order,
-            old_status=old_status,
-            new_status=new_status,
-            note='Status updated by admin',
-            created_by=request.user
-        )
+            if new_status in dict(Order.STATUS_CHOICES):
+                old_status = order.status
+                order.status = new_status
+                order.save()
 
-        return Response({'success': True, 'message': 'Order status updated'})
+                # Record status history
+                OrderStatusHistory.objects.create(
+                    order=order,
+                    old_status=old_status,
+                    new_status=new_status,
+                    note=notes,
+                    created_by=request.user
+                )
 
-    return Response({'success': False, 'message': 'Invalid status'}, status=400)
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Order status updated from {old_status} to {new_status}'
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Invalid status'
+                }, status=400)
+
+    except Order.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Order not found'}, status=404)
+    except Exception as e:
+        print(f"DEBUG: Error in update_order_status: {str(e)}")
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 
 @admin_required
@@ -993,6 +1012,7 @@ class UserManagementAPI(APIView):
                 }
             })
         except Exception as e:
+            print(f"DEBUG: Error in UserManagementAPI: {str(e)}")
             return Response({'error': str(e)}, status=500)
 
 
@@ -1042,19 +1062,50 @@ class OrderManagementAPI(APIView):
     def get(self, request):
         try:
             status_filter = request.GET.get('status', '')
+            payment_status_filter = request.GET.get('payment_status', '')
+            search = request.GET.get('search', '')
+            date_from = request.GET.get('date_from', '')
+            date_to = request.GET.get('date_to', '')
             page = int(request.GET.get('page', 1))
             limit = int(request.GET.get('limit', 20))
+            sort = request.GET.get('sort', 'newest')
 
             queryset = Order.objects.all().select_related('user')
 
+            # Apply filters
             if status_filter:
                 queryset = queryset.filter(status=status_filter)
+            if payment_status_filter:
+                queryset = queryset.filter(
+                    payment_status=payment_status_filter)
+            if search:
+                queryset = queryset.filter(
+                    Q(order_number__icontains=search) |
+                    Q(user__email__icontains=search) |
+                    Q(user__first_name__icontains=search) |
+                    Q(user__last_name__icontains=search)
+                )
+            if date_from:
+                queryset = queryset.filter(created_at__date__gte=date_from)
+            if date_to:
+                queryset = queryset.filter(created_at__date__lte=date_to)
 
-            # Simple pagination
+            # Apply sorting
+            if sort == 'newest':
+                queryset = queryset.order_by('-created_at')
+            elif sort == 'oldest':
+                queryset = queryset.order_by('created_at')
+            elif sort == 'total_asc':
+                queryset = queryset.order_by('grand_total')
+            elif sort == 'total_desc':
+                queryset = queryset.order_by('-grand_total')
+
+            # Pagination
+            total = queryset.count()
             start_idx = (page - 1) * limit
             end_idx = start_idx + limit
 
-            orders = list(queryset.order_by('-created_at')[start_idx:end_idx])
+            orders = list(queryset[start_idx:end_idx])
             serializer = OrderManagementSerializer(orders, many=True)
 
             return Response({
@@ -1062,22 +1113,30 @@ class OrderManagementAPI(APIView):
                 'pagination': {
                     'page': page,
                     'limit': limit,
-                    'total': queryset.count()
+                    'total': total
                 }
             })
         except Exception as e:
+            print(f"DEBUG: Error in OrderManagementAPI: {str(e)}")
             return Response({'error': str(e)}, status=500)
 
 
 @method_decorator(admin_required, name='dispatch')
 class OrderDetailAPI(APIView):
     def get(self, request, order_id):
+        """Get detailed order information"""
         try:
-            order = Order.objects.get(id=order_id)
+            order = Order.objects.select_related('user').prefetch_related(
+                'items', 'items__product', 'status_history'
+            ).get(id=order_id)
+
             serializer = OrderDetailManagementSerializer(order)
             return Response(serializer.data)
         except Order.DoesNotExist:
             return Response({'error': 'Order not found'}, status=404)
+        except Exception as e:
+            print(f"DEBUG: Error in OrderDetailAPI: {str(e)}")
+            return Response({'error': str(e)}, status=500)
 
 
 class CategoryListAPI(APIView):
