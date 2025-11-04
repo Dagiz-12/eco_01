@@ -1,5 +1,6 @@
 
 
+from payments.models import Payment, Refund
 from django.http import HttpResponse, JsonResponse
 import csv
 
@@ -7,7 +8,7 @@ import csv
 # Add these imports at the top
 
 from datetime import datetime, timedelta
-from django.http import JsonResponse
+
 import traceback
 from django.shortcuts import render
 
@@ -90,6 +91,189 @@ def payment_management(request):
 def show_add_product_form(request):
     """Render the add product form"""
     return render(request, 'admin_dashboard/add_product.html')
+
+
+# admin payment views
+
+# Add to admin_dashboard/views.py
+
+
+@admin_required
+def get_order_payments(request, order_id):
+    """Get payment information for an order"""
+    try:
+        order = get_object_or_404(Order, id=order_id)
+
+        # Get payments for this order
+        payments = Payment.objects.filter(order=order).order_by('-created_at')
+
+        payments_data = []
+        for payment in payments:
+            payment_data = {
+                'id': payment.id,
+                'payment_id': str(payment.payment_id),
+                'payment_method': payment.payment_method,
+                'status': payment.status,
+                'amount': str(payment.amount),
+                'currency': payment.currency,
+                'gateway_payment_id': payment.gateway_payment_id,
+                'created_at': payment.created_at.isoformat(),
+                'completed_at': payment.completed_at.isoformat() if payment.completed_at else None,
+                'failed_at': payment.failed_at.isoformat() if payment.failed_at else None,
+                'is_successful': payment.is_successful,
+                'can_be_refunded': payment.can_be_refunded,
+            }
+
+            # Add gateway-specific information
+            if hasattr(payment, 'cbe_transaction'):
+                cbe = payment.cbe_transaction
+                payment_data['gateway_details'] = {
+                    'type': 'cbe',
+                    'transaction_id': cbe.transaction_id,
+                    'status': cbe.status,
+                    'ussd_code': f'*127*1*{cbe.transaction_id}#' if cbe.transaction_id else None,
+                }
+            elif hasattr(payment, 'telebirr_transaction'):
+                telebirr = payment.telebirr_transaction
+                payment_data['gateway_details'] = {
+                    'type': 'telebirr',
+                    'transaction_id': telebirr.transaction_id,
+                    'status': telebirr.status,
+                    'ussd_code': f'*806*{telebirr.transaction_id}#' if telebirr.transaction_id else None,
+                    'qr_code_url': telebirr.qr_code_url,
+                }
+            elif payment.payment_method in ['stripe', 'paypal']:
+                payment_data['gateway_details'] = {
+                    'type': payment.payment_method,
+                    'transaction_id': payment.gateway_payment_id,
+                }
+
+            payments_data.append(payment_data)
+
+        return JsonResponse({
+            'success': True,
+            'order_id': order_id,
+            'payments': payments_data,
+            'total_payments': len(payments_data)
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Failed to fetch payment data: {str(e)}'
+        }, status=500)
+
+
+@admin_required
+def verify_payment(request, payment_id):
+    """Manually verify a payment"""
+    try:
+        payment = get_object_or_404(Payment, id=payment_id)
+
+        # Check if payment can be verified
+        if payment.status in ['completed', 'refunded', 'partially_refunded']:
+            return JsonResponse({
+                'success': False,
+                'message': f'Payment is already {payment.status}'
+            }, status=400)
+
+        # Simulate payment verification
+        # In production, this would call the actual gateway API
+        if payment.payment_method == 'cbe' and hasattr(payment, 'cbe_transaction'):
+            # Simulate CBE verification
+            from payments.models import PaymentManager
+            success, message = PaymentManager.verify_cbe_payment(
+                payment.cbe_transaction.transaction_id
+            )
+
+        elif payment.payment_method == 'telebirr' and hasattr(payment, 'telebirr_transaction'):
+            # Simulate TeleBirr verification
+            from payments.models import PaymentManager
+            success, message = PaymentManager.verify_telebirr_payment(
+                payment.telebirr_transaction.transaction_id
+            )
+
+        else:
+            # For other payment methods, mark as completed for demo
+            payment.mark_as_completed()
+            success, message = True, f'{payment.get_payment_method_display()} payment verified successfully'
+
+        if success:
+            # Update order payment status if payment is completed
+            if payment.status == 'completed':
+                payment.order.payment_status = 'paid'
+                payment.order.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': message,
+                'payment_status': payment.status,
+                'order_payment_status': payment.order.payment_status
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': message
+            }, status=400)
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Payment verification failed: {str(e)}'
+        }, status=500)
+
+
+@admin_required
+def get_payment_details(request, payment_id):
+    """Get detailed payment information"""
+    try:
+        payment = get_object_or_404(Payment, id=payment_id)
+
+        payment_data = {
+            'id': payment.id,
+            'payment_id': str(payment.payment_id),
+            'order_number': payment.order.order_number,
+            'customer_name': f"{payment.user.first_name} {payment.user.last_name}",
+            'customer_email': payment.user.email,
+            'payment_method': payment.payment_method,
+            'payment_method_display': payment.get_payment_method_display(),
+            'status': payment.status,
+            'status_display': payment.get_status_display(),
+            'amount': str(payment.amount),
+            'currency': payment.currency,
+            'gateway_payment_id': payment.gateway_payment_id,
+            'gateway_response': payment.gateway_response,
+            'created_at': payment.created_at.isoformat(),
+            'completed_at': payment.completed_at.isoformat() if payment.completed_at else None,
+            'failed_at': payment.failed_at.isoformat() if payment.failed_at else None,
+            'is_successful': payment.is_successful,
+            'can_be_refunded': payment.can_be_refunded,
+        }
+
+        # Add refund information
+        refunds = Refund.objects.filter(payment=payment)
+        payment_data['refunds'] = [
+            {
+                'refund_id': str(refund.refund_id),
+                'amount': str(refund.amount),
+                'reason': refund.reason,
+                'status': refund.status,
+                'created_at': refund.created_at.isoformat(),
+                'processed_at': refund.processed_at.isoformat() if refund.processed_at else None,
+            }
+            for refund in refunds
+        ]
+
+        return JsonResponse({
+            'success': True,
+            'payment': payment_data
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Failed to fetch payment details: {str(e)}'
+        }, status=500)
 
 
 @method_decorator(admin_required, name='dispatch')
@@ -892,7 +1076,7 @@ def verify_user(request, user_id):
 
 @admin_required
 def update_order_status(request, order_id):
-    """Update order status with proper error handling"""
+    """Update order status with payment validation"""
     try:
         order = get_object_or_404(Order, id=order_id)
 
@@ -901,6 +1085,13 @@ def update_order_status(request, order_id):
             data = json.loads(request.body)
             new_status = data.get('status')
             notes = data.get('notes', '')
+
+            # 🚨 PAYMENT VALIDATION: Prevent confirming unpaid orders
+            if new_status == 'confirmed' and order.payment_status != 'paid':
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Cannot confirm order #{order.order_number}: Payment not received. Current payment status: {order.payment_status}'
+                }, status=400)
 
             if new_status in dict(Order.STATUS_CHOICES):
                 old_status = order.status
@@ -1063,6 +1254,8 @@ class OrderManagementAPI(APIView):
         try:
             status_filter = request.GET.get('status', '')
             payment_status_filter = request.GET.get('payment_status', '')
+            payment_status_detailed_filter = request.GET.get(
+                'payment_status_detailed', '')
             search = request.GET.get('search', '')
             date_from = request.GET.get('date_from', '')
             date_to = request.GET.get('date_to', '')
@@ -1078,6 +1271,12 @@ class OrderManagementAPI(APIView):
             if payment_status_filter:
                 queryset = queryset.filter(
                     payment_status=payment_status_filter)
+            if payment_status_detailed_filter:
+                if payment_status_detailed_filter == 'no_payment':
+                    queryset = queryset.filter(payments__isnull=True)
+                else:
+                    queryset = queryset.filter(
+                        payments__status=payment_status_detailed_filter)
             if search:
                 queryset = queryset.filter(
                     Q(order_number__icontains=search) |
@@ -1106,10 +1305,42 @@ class OrderManagementAPI(APIView):
             end_idx = start_idx + limit
 
             orders = list(queryset[start_idx:end_idx])
-            serializer = OrderManagementSerializer(orders, many=True)
+
+            # Enhanced serialization with payment info
+            orders_data = []
+            for order in orders:
+                # Get the latest payment for this order
+                latest_payment = Payment.objects.filter(
+                    order=order).order_by('-created_at').first()
+
+                order_data = {
+                    'id': order.id,
+                    'order_number': order.order_number,
+                    'customer_name': f"{order.user.first_name} {order.user.last_name}",
+                    'customer_email': order.user.email,
+                    'status': order.status,
+                    'payment_status': order.payment_status,
+                    'payment_method': order.payment_method,
+                    'grand_total': str(order.grand_total),
+                    'subtotal': str(order.subtotal),
+                    'shipping_cost': str(order.shipping_cost),
+                    'tax_amount': str(order.tax_amount),
+                    'item_count': order.items.count(),
+                    'created_at': order.created_at.isoformat(),
+                    'updated_at': order.updated_at.isoformat(),
+
+                    # FIXED: Enhanced payment information
+                    'has_payment': latest_payment is not None,
+                    'payment_status_detailed': latest_payment.status if latest_payment else 'no_payment',
+                    'payment_amount': str(latest_payment.amount) if latest_payment else '0.00',
+                    'payment_currency': latest_payment.currency if latest_payment else 'ETB',
+                    'payment_created_at': latest_payment.created_at.isoformat() if latest_payment else None,
+                    'payment_completed_at': latest_payment.completed_at.isoformat() if latest_payment and latest_payment.completed_at else None,
+                }
+                orders_data.append(order_data)
 
             return Response({
-                'orders': serializer.data,
+                'orders': orders_data,  # Use enhanced data instead of serializer
                 'pagination': {
                     'page': page,
                     'limit': limit,

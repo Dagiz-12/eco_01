@@ -61,4 +61,12 @@ urlpatterns = [
          name='api-products-bulk-actions'),
     path('api/products/export/', views.export_products_csv,
          name='api-products-export'),
+
+    # Payment management URLs
+    path('api/orders/<int:order_id>/payments/',
+         views.get_order_payments, name='get-order-payments'),
+    path('api/payments/<int:payment_id>/verify/',
+         views.verify_payment, name='verify-payment'),
+    path('api/payments/<int:payment_id>/details/',
+         views.get_payment_details, name='get-payment-details'),
 ]

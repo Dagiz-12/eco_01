@@ -1,3 +1,4 @@
+from orders.models import Order  # Add this import at the top
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.core.mail import send_mail
@@ -133,3 +134,28 @@ def record_payment_status_change(sender, instance, **kwargs):
                     instance.order.save()
         except Payment.DoesNotExist:
             pass  # New instance
+
+
+@receiver(post_save, sender=Order)
+def create_payment_for_new_order(sender, instance, created, **kwargs):
+    """
+    Automatically create a payment record when a new order is created
+    """
+    if created:
+        try:
+            # Check if payment already exists
+            if not hasattr(instance, 'payment'):
+                from .models import Payment, PaymentManager
+
+                # Create payment using your PaymentManager
+                payment = PaymentManager.create_payment(
+                    order=instance,
+                    payment_method=instance.payment_method or 'manual'
+                )
+
+                print(
+                    f"✅ Created payment {payment.payment_id} for order {instance.order_number}")
+
+        except Exception as e:
+            print(
+                f"❌ Failed to create payment for order {instance.order_number}: {e}")
